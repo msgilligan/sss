@@ -474,10 +474,28 @@ int toWords(
 	unsigned short *words, // destination for words
 	size_t max             // maximum number of words to write
 ) {
+
+	// The bottom bit of the last byte will always show up in 
+	// the bottom bit of the last word.
+
+	// calculate the padding bits to add to the first byte to get
+	// the last byte and the last word bottom bits to align
+    //
+    // bytes  5       4       3       2       1       0
+	//        |...,...|...,...|...,...|...,...|...,...+
+	//        X         X         X         X         *
+	// words  4         3         2         1         0
+	//
+	// Looks like the number of zero bit padding to add
+	// is 2x the remainder when your divide the number of
+	// bytes by 5.
+	
 	unsigned char * buf = buffer;
 	unsigned int byte = 0;
 	unsigned int word = 0;
-	int bits = 0;
+
+	int bits = (size % 5) * 2; // padded so that bottom bits align
+
 	unsigned int i = 0;
 
 	if(max < bytes_to_words(size)) {
@@ -499,10 +517,6 @@ int toWords(
 		bits -= 10;
 	}	
 
-	if(bits > 0) {
-		words[word++] = i << (10-bits);
-	}
-
 	return word;
 }
 
@@ -513,9 +527,29 @@ int fromWords(
 	void *buffer,          // space for result
 	size_t size            // total space available
 ) {
+
+
+	// The bottom bit of the last byte will always show up in 
+	// the bottom bit of the last word.
+
+	// calculate the padding bits to add to the first byte to get
+	// the last byte and the last word bottom bits to align
+    //
+    // bytes  5       4       3       2       1       0
+	//        |...,...|...,...|...,...|...,...|...,...+
+	//        X         X         X         X         *
+	// words  4         3         2         1         0
+	//
+
+
 	unsigned char * buf = buffer;
 	unsigned int word = 0;
-	int bits = 0;
+	int bits = -2*(wordsize%4);
+
+	// If the number of words is an odd multiple of 5, and the top
+	// byte is all zeros, we should probably discard it to get a
+	// resulting buffer that is an even number of bytes.
+	unsigned char discard_top_zeros = (wordsize%4 == 0);	
 	unsigned int byte = 0;
 	unsigned int i = 0;
 
@@ -528,6 +562,11 @@ int fromWords(
 		i = (i << 10) | words[word++];
 		bits += 10;
 
+		if(discard_top_zeros && (i & 1020)==0) {
+			discard_top_zeros = 0;
+			bits -= 8;
+		}
+		
 		while(bits >= 8 && byte < size) {
 			buf[byte++] = (i >> (bits -8));
 			i = i & ((1<<(bits-8))-1);
@@ -540,6 +579,32 @@ int fromWords(
 	}	
 
 	return byte;
+}
+
+void test_toWords_fromWords() {
+	
+
+
+	char *x = "abcdefghijklmnopqrstuvwxyz";
+	unsigned short words[25];
+	unsigned char results[30];
+	int w;
+	int b;
+	
+	for(unsigned char i=0; i<26; ++i) {
+		w = toWords(x+i , strlen(x+i)+1, words, 25);
+		b = fromWords(words, w, results, 30);
+		if(strcmp(results,x+i) !=0) {
+			printf("Fail: '%s' != '%s'\n", x+i, results);
+			//return;
+			for(unsigned char j=0;j<w;j++) {
+				printf("%d ", words[j]);
+			}
+			printf("\n");
+		}	
+	}
+
+	printf("pass");
 }
 
 void test_gf256() {
@@ -964,7 +1029,7 @@ int generate_mnemonics(
 		return -1;
 	}
 
-	for(unsigned char *p = passphrase; *p; p++) {
+	for(unsigned char *p = (unsigned char *) passphrase; *p; p++) {
 		if( (*p < 32) || (126 < *p) ) {
 			printf("The passphrase must contain only printable ASCII characters: %s %d\n",passphrase, *p);
 			return -1;
@@ -1405,6 +1470,8 @@ int main(int argc, char *argv[]) {
 
     precompute_gf256_exp_log_tables();
 
+
+	test_toWords_fromWords();
 	//test_gf256();
 	//test_lagrange();
 	//test_interpolation();
@@ -1414,8 +1481,8 @@ int main(int argc, char *argv[]) {
 	test_generate_combine1();
 
 	//test_encrypt_decrypt();
-	//test_valid_mnemonic();
+	test_valid_mnemonic();
 	//test_round_function();
 	//test_encrypt_function();
-	//test_multi();
+	test_multi();
 }
