@@ -62,7 +62,6 @@ for (number in vectors) {
 call_tests = vectors.map((x,i) => `test_vector_${i}();`).join('    \n');
 console.log(`
 void main(void) {
-    setup();
 	${call_tests}
 }
 `)

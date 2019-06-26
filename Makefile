@@ -23,26 +23,61 @@ hazmat.o: CFLAGS += -funroll-loops
 test_hazmat.out: $(OBJS)
 test_sss.out: $(OBJS)
 
-tests.c: vectors_to_tests.js vectors.json
-	node vectors_to_tests.js > tests.c
+slip39_tests.c: vectors_to_tests.js vectors.json
+	node vectors_to_tests.js > slip39_tests.c
 
-test.o: test.c
+slip39_tests.o: slip39_tests.c
 
-wordlist.o: wordlist.c
+slip39_tests: slip39_tests.o gf256.o gf256_interpolate.o slip39_wordlist.o slip39_rs1024.o \
+     slip39_shamir.o slip39_mnemonics.o test_random.o slip39_encrypt.o
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ -l crypto
+	$(MEMCHECK) ./$@
 
-tests: wordlist.o tests.o
-	gcc wordlist.o tests.o -o tests -l crypto
-
-
-gf256.o: gf256.c gf256.h
+gf256%.o: gf256&%.c gf256.h gf256%.h
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $<
 
 test_gf256.o: test_gf256.c gf256.h
 
-test_gf256: test_gf256.o gf256.o
-	gcc $^ -o $@
+test_gf256.out: test_gf256.o gf256.o
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
+	$(MEMCHECK) ./$@
+
+test_gf256_interpolate.o: test_gf256_interpolate.c
+
+test_gf256_interpolate.out: gf256_interpolate.o gf256.o test_gf256_interpolate.o
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
+	$(MEMCHECK) ./$@
+
+test_slip39_wordlist.o: slip39.h test_slip39_wordlist.c
+
+slip39_wordlist.o: slip39.h slip39_wordlist.c slip39_wordlist_english.h
+
+test_slip39_wordlist.out: test_slip39_wordlist.o slip39_wordlist.o
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
+	$(MEMCHECK) ./$@
+
+test_random.o: test_random.c
+
+test_slip39_shamir.o: test_slip39_shamir.c slip39.h
+
+slip39_shamir.o: slip39_shamir.c slip39.h
+
+test_slip39_shamir: test_slip39_shamir.o slip39_shamir.o gf256.o gf256_interpolate.o test_random.o
+	gcc $^ -o $@ -l crypto
 	./$@
 
-.PHONY: check
+
+slip39_encrypt.o: slip39_encrypt.c slip39.h
+
+test_slip39_encrypt: test_slip39_encrypt.o slip39_encrypt.o 
+	gcc $^ -o $@ -l crypto
+	./$@
+
+
+check_slip39: test_gf256 test_gf256_interpolate test_slip39_wordlist test_slip39_shamir test_slip39_encrypt
+
+
+.PHONY: check check_slip39
 check: test_hazmat.out test_sss.out
 
 .PHONY: clean
