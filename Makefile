@@ -33,6 +33,15 @@ wordlist.o: wordlist.c
 tests: wordlist.o tests.o
 	gcc wordlist.o tests.o -o tests -l crypto
 
+
+gf256.o: gf256.c gf256.h
+
+test_gf256.o: test_gf256.c gf256.h
+
+test_gf256: test_gf256.o gf256.o
+	gcc $^ -o $@
+	./$@
+
 .PHONY: check
 check: test_hazmat.out test_sss.out
 
