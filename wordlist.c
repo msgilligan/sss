@@ -31,7 +31,7 @@
 //////////////////////////////////////////////////
 // rs1024 checksum functions
 
-unsigned int generator[] = {
+static const unsigned int generator[] = {
 	0x00E0E040,
     0x01C1C080,
     0x03838100,
@@ -44,7 +44,7 @@ unsigned int generator[] = {
     0x03F3F120,	 	
 };
 
-const unsigned short customization[] = {
+static const unsigned short customization[] = {
 	's', 'h', 'a', 'm', 'i', 'r',
 };
 
@@ -122,8 +122,8 @@ unsigned int rs1024_verify_checksum(
 // for a,b !=0
 // a * b     |  exp[ (log[a] + log[b]) % 256 ]
 // a / b     |  exp[ (log[a] - log[b]) % 256 ]
-unsigned char gf256_exp[255];
-unsigned char gf256_log[256];
+static unsigned char gf256_exp[255];
+static unsigned char gf256_log[256];
 
 void precompute_gf256_exp_log_tables(void) {
 	int i;
@@ -548,8 +548,9 @@ int fromWords(
 
 	// If the number of words is an odd multiple of 5, and the top
 	// byte is all zeros, we should probably discard it to get a
-	// resulting buffer that is an even number of bytes.
-	unsigned char discard_top_zeros = (wordsize%4 == 0);	
+	// resulting buffer that is an even number of bytes 
+
+	unsigned char discard_top_zeros = (wordsize%4 == 0) && (wordsize & 4);	
 	unsigned int byte = 0;
 	unsigned int i = 0;
 
@@ -582,19 +583,16 @@ int fromWords(
 }
 
 void test_toWords_fromWords() {
-	
-
-
-	char *x = "abcdefghijklmnopqrstuvwxyz";
+	char *x = " abcdefghijklmnopqrstuvwxyz";
 	unsigned short words[25];
 	unsigned char results[30];
 	int w;
-	int b;
 	
-	for(unsigned char i=0; i<26; ++i) {
+	for(unsigned char i=0; i<26; i+=2) {
 		w = toWords(x+i , strlen(x+i)+1, words, 25);
-		b = fromWords(words, w, results, 30);
-		if(strcmp(results,x+i) !=0) {
+		fromWords(words, w, results, 30);
+		
+		if(strcmp((char *)results,x+i) !=0) {
 			printf("Fail: '%s' != '%s'\n", x+i, results);
 			//return;
 			for(unsigned char j=0;j<w;j++) {
@@ -1465,24 +1463,28 @@ void test_multi(void) {
 	}
 }
 
+void setup(void) {
+    precompute_gf256_exp_log_tables();		
+}
 
+/*
 int main(int argc, char *argv[]) {
 
-    precompute_gf256_exp_log_tables();
+	setup();
 
-
-	test_toWords_fromWords();
+	//test_toWords_fromWords();
 	//test_gf256();
 	//test_lagrange();
 	//test_interpolation();
 
 	//test_split_recover();
 
-	test_generate_combine1();
+	//test_generate_combine1();
 
 	//test_encrypt_decrypt();
-	test_valid_mnemonic();
+	//test_valid_mnemonic();
 	//test_round_function();
 	//test_encrypt_function();
 	test_multi();
 }
+*/

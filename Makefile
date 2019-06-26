@@ -23,6 +23,16 @@ hazmat.o: CFLAGS += -funroll-loops
 test_hazmat.out: $(OBJS)
 test_sss.out: $(OBJS)
 
+tests.c: vectors_to_tests.js vectors.json
+	node vectors_to_tests.js > tests.c
+
+test.o: test.c
+
+wordlist.o: wordlist.c
+
+tests: wordlist.o tests.o
+	gcc wordlist.o tests.o -o tests -l crypto
+
 .PHONY: check
 check: test_hazmat.out test_sss.out
 
