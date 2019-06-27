@@ -14,25 +14,21 @@ int16_t lagrange(
     const uint8_t *xi, // x coordinates of all points (array of size n)
     uint8_t x    // x coordinate to evaluate
 ) {
-    int16_t log_result = 0;
+    uint8_t result = 1;
     uint8_t i;
 
     for(i=0;i<n;++i) {
         if(i!=m) {
-            if(x == xi[i]) {
-                return 0;
-            }
 
             if(xi[m] == xi[i]) {
                 return -1;
             }
 
-            log_result += gf256_log(x ^ xi[i]) - gf256_log(xi[m] ^ xi[i]);
-            log_result = (255+log_result) % 255;
+            result = gf256_mult( result, gf256_div(x ^ xi[i], xi[m] ^ xi[i]));
         }
     }
 
-    return gf256_exp(log_result);
+    return result;
 }
 
 
