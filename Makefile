@@ -62,19 +62,26 @@ test_slip39_shamir.o: test_slip39_shamir.c slip39.h
 
 slip39_shamir.o: slip39_shamir.c slip39.h
 
-test_slip39_shamir: test_slip39_shamir.o slip39_shamir.o gf256.o gf256_interpolate.o test_random.o
+test_slip39_shamir.out: test_slip39_shamir.o slip39_shamir.o gf256.o gf256_interpolate.o test_random.o
 	gcc $^ -o $@ -l crypto
 	./$@
 
 
 slip39_encrypt.o: slip39_encrypt.c slip39.h
 
-test_slip39_encrypt: test_slip39_encrypt.o slip39_encrypt.o 
+test_slip39_encrypt.out: test_slip39_encrypt.o slip39_encrypt.o 
 	gcc $^ -o $@ -l crypto
 	./$@
 
 
-check_slip39: test_gf256 test_gf256_interpolate test_slip39_wordlist test_slip39_shamir test_slip39_encrypt
+test_generate_combine.o: test_generate_combine.c
+
+test_generate_combine.out: test_generate_combine.o gf256.o gf256_interpolate.o slip39_wordlist.o \
+     slip39_rs1024.o slip39_shamir.o slip39_mnemonics.o slip39_encrypt.o randombytes/librandombytes.a
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -l crypto
+	$(MEMCHECK) ./$@
+
+check_slip39: test_gf256.out test_gf256_interpolate.out test_slip39_wordlist.out test_slip39_shamir.out test_slip39_encrypt.out
 
 
 .PHONY: check check_slip39

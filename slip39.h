@@ -253,4 +253,15 @@ int combine_mnemonics(
 	uint32_t buffer_length      // total amount of working space
 );
 
+
+void encrypt_share(
+    slip39_share *share,
+    const char *passphrase
+);
+
+void decrypt_share(
+    slip39_share *share,
+    const char *passphrase
+);
+
 #endif

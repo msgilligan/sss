@@ -370,3 +370,23 @@ int combine_mnemonics(
 }
 
 
+////
+// encrypt/decrypt shares
+//
+void encrypt_share(
+    slip39_share *share,
+    const char *passphrase
+) {
+    uint8_t temp[share->value_length];
+    encrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
+    memcpy(share->value, temp, share->value_length);        
+}
+
+void decrypt_share(
+    slip39_share *share,
+    const char * passphrase
+) {
+    uint8_t temp[share->value_length];
+    decrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
+    memcpy(share->value, temp, share->value_length);        
+}
