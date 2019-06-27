@@ -54,6 +54,7 @@
 typedef struct group_descriptor_struct {
 	uint8_t threshold;
 	uint8_t count;
+	const char **passwords;
 } group_descriptor;
 
 typedef struct slip39_share_struct {
@@ -249,6 +250,7 @@ int combine_mnemonics(
 	uint32_t mnemonics_words,   // number of words in each share
 	uint32_t mnemonics_shares,  // total number of shares
 	const char *passphrase,     // passphrase to unlock master secret
+	const char **passwords,     // passwords protecting shares
 	uint8_t *buffer,            // working space, and place to return secret
 	uint32_t buffer_length      // total amount of working space
 );

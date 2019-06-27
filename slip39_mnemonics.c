@@ -199,6 +199,10 @@ int generate_mnemonics(
             share.member_index = j;
             share.value = value;
 
+            if(groups[i].passwords && groups[i].passwords[j]) {
+                encrypt_share(&share, groups[i].passwords[j]);
+            }
+            
             unsigned int words = encode_mnemonic(&share, mnemonic, remaining_buffer);
 
             if(word_count == 0) {
@@ -211,6 +215,7 @@ int generate_mnemonics(
             remaining_buffer -= word_count;
             share_count++;
             mnemonic += word_count;
+
         }
     }
 
@@ -239,6 +244,7 @@ int combine_mnemonics(
     uint32_t mnemonics_words,   // number of words in each share
     uint32_t mnemonics_shares,  // total number of shares
     const char *passphrase,     // passphrase to unlock master secret
+    const char **passwords,     // passwords for the shares
     uint8_t *buffer,            // working space, and place to return secret
     uint32_t buffer_length      // total amount of working space
 ) {
@@ -272,6 +278,10 @@ int combine_mnemonics(
             return bytes;
         }
 
+        if(passwords && passwords[i]) {
+            decrypt_share(&share, passwords[i]);
+        }
+        
         // advance pointers into free buffer
         buffer_remaining -= bytes;
         secret_length = bytes;

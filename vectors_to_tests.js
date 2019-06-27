@@ -25,7 +25,7 @@ function generate_test(number, name, shares, result) {
 		//if( strlen(expected_result) > 0 ) {
 			
         printf("%s - ", name);
-        int length = combine_mnemonics(recovery, n, ${shares.length}, "TREZOR", buffer, 32);
+        int length = combine_mnemonics(recovery, n, ${shares.length}, "TREZOR", NULL, buffer, 32);
 
         if(length > 0) {
             bufToHex(buffer, length, result, 256);
