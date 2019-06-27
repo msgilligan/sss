@@ -25,7 +25,25 @@
 #define SECRET_INDEX 255
 #define DIGEST_INDEX 254
 
-#define MAX_SECRET_LENGTH 256
+#define ERROR_NOT_ENOUGH_MNEMONIC_WORDS        -1
+#define ERROR_INVALID_MNEMONIC_CHECKSUM        -2
+#define ERROR_INVALID_MNEMONIC_GROUP_THRESHOLD -3
+#define ERROR_SECRET_TOO_SHORT                 -4
+#define ERROR_INVALID_GROUP_THRESHOLD          -5
+#define ERROR_INVALID_SINGLETOM_MEMBER         -6
+#define ERROR_INSUFFICIENT_SPACE               -7
+#define ERROR_INVALID_SECRET_LENGTH            -8
+#define ERROR_INVALID_PASSPHRASE               -9
+#define ERROR_INVALID_SHARE_SET               -10
+#define ERROR_EMPTY_MNEMONIC_SET              -11
+#define ERROR_DUPLICATE_MEMBER_INDEX          -12
+#define ERROR_NOT_ENOUGH_MEMBER_SHARES        -13
+#define ERROR_INVALID_MEMBER_THRESHOLD        -14
+#define ERROR_TOO_MANY_SHARES                 -15
+#define ERROR_INTERPOLATION_FAILURE           -16
+#define ERROR_CHECKSUM_FAILURE                -17
+#define ERROR_INVALID_PADDING                 -18
+#define ERROR_NOT_ENOUGH_GROUPS               -19
 
 #include <stdio.h>
 #include <string.h>

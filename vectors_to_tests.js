@@ -21,7 +21,7 @@ function generate_test(number, name, shares, result) {
         unsigned char buffer[1024];
         char result[256];
 
-		if( strlen(expected_result) > 0 ) {
+		//if( strlen(expected_result) > 0 ) {
 			
         printf("%s - ", name);
         int length = combine_mnemonics(recovery, n, ${shares.length}, "TREZOR", buffer, 1024);
@@ -37,7 +37,7 @@ function generate_test(number, name, shares, result) {
         } else {
             printf("pass\\n");
         }   
-        }     
+        //}     
     }
     `
 }

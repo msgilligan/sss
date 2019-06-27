@@ -152,6 +152,12 @@ int32_t fromWords(
     uint32_t word = 0;
     int16_t bits = -2*(wordsize%4);
 
+    // A negiative number indicates a number of padding bits. Those bits
+    // must be zero.
+    if(bits <0 && (words[0] & (1023 << (10+bits)))) {
+        return ERROR_INVALID_PADDING;
+    }
+
     // If the number of words is an odd multiple of 5, and the top
     // byte is all zeros, we should probably discard it to get a
     // resulting buffer that is an even number of bytes
@@ -161,8 +167,7 @@ int32_t fromWords(
     uint16_t i = 0;
 
     if(size < words_to_bytes(wordsize)) {
-        printf("Not enough space to decode %d 10-bit words into bytes. (%d bytes needed, %d bytes available)\n", (int) wordsize, (int) words_to_bytes(wordsize), (int)size);
-        return -1;
+        return ERROR_INSUFFICIENT_SPACE;
     }
 
     while(word < wordsize && byte < size) {

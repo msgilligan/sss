@@ -48,7 +48,7 @@ int32_t split_secret(
     uint8_t *result
 ) {
     if( share_count > MAX_SHARE_COUNT) {
-        return -1;
+        return ERROR_TOO_MANY_SHARES;
     }
 
     if(threshold == 1) {
@@ -87,8 +87,8 @@ int32_t split_secret(
         n+=1;
 
         for(uint8_t i=threshold -2; i<share_count; ++i, share += secret_length) {
-            if( interpolate(n, x, secret_length, y, i, share) < 0) {
-                return -1;
+            if(interpolate(n, x, secret_length, y, i, share) < 0) {
+                return ERROR_INTERPOLATION_FAILURE;
             }
         }
     }
@@ -118,7 +118,7 @@ int32_t recover_secret(
     if( interpolate(threshold, x, share_length, shares, DIGEST_INDEX, digest) < 0 ||
         interpolate(threshold, x, share_length, shares, SECRET_INDEX, secret) < 0
     ) {
-        return -1;
+        return ERROR_INTERPOLATION_FAILURE;
     }
 
     create_digest(digest+4, share_length-4, secret, share_length, verify);
@@ -128,10 +128,7 @@ int32_t recover_secret(
     }
 
     if(!valid) {
-        printf("Recover secret failed checksum.\n");
-        return -1;
+        return ERROR_CHECKSUM_FAILURE;
     }
     return share_length;
 }
-
-
