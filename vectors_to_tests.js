@@ -10,6 +10,7 @@ function generate_test(number, name, shares, result) {
 
     recovery_values = shares.map((x,i) => `words_${i}`).join(', ');
     return `
+    void test_vector_${number}(void);
     void test_vector_${number}(void) {
         char *name = "${name}";
         unsigned int n;
@@ -17,14 +18,14 @@ function generate_test(number, name, shares, result) {
         };
         char *expected_result = "${result}";
         ${parse_code}
-        unsigned short *recovery[] = { ${recovery_values} };
-        unsigned char buffer[1024];
+        const unsigned short *recovery[] = { ${recovery_values} };
+        unsigned char buffer[32];
         char result[256];
 
 		//if( strlen(expected_result) > 0 ) {
 			
         printf("%s - ", name);
-        int length = combine_mnemonics(recovery, n, ${shares.length}, "TREZOR", buffer, 1024);
+        int length = combine_mnemonics(recovery, n, ${shares.length}, "TREZOR", buffer, 32);
 
         if(length > 0) {
             bufToHex(buffer, length, result, 256);
@@ -48,8 +49,9 @@ vectors = require('./vectors.json')
 console.log('#include "slip39.h"')
 
 console.log(`
+void bufToHex(unsigned char *buf, unsigned int length, char *output, int out_length);
 void bufToHex(unsigned char *buf, unsigned int length, char *output, int out_length) {
-	for(unsigned int i=0; i<length; 2*i+1<out_length, ++i) {
+	for(unsigned int i=0; i<length &&2*i+1<out_length; ++i) {
 		sprintf(output + 2*i, "%02x", buf[i]);
 	}
 }`)
@@ -61,7 +63,8 @@ for (number in vectors) {
 
 call_tests = vectors.map((x,i) => `test_vector_${i}();`).join('    \n');
 console.log(`
-void main(void) {
+int main(void) {
 	${call_tests}
+    return 0;
 }
 `)

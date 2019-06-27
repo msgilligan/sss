@@ -224,6 +224,8 @@ void print_mnemonic(
     unsigned int mnemonic_length
 );
 
+void print_group(slip39_group *g, unsigned int secret_length);
+
 //////////////////////////////////////////////////
 // generate mnemonics
 int generate_mnemonics(

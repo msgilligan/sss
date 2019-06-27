@@ -155,7 +155,7 @@ int generate_mnemonics(
         return ERROR_INVALID_SECRET_LENGTH;
     }
 
-    for(uint8_t *p = (uint8_t *) passphrase; *p; p++) {
+    for(const uint8_t *p = (const uint8_t *) passphrase; *p; p++) {
         if( (*p < 32) || (126 < *p) ) {
             return ERROR_INVALID_PASSPHRASE;
         }
@@ -254,8 +254,10 @@ int combine_mnemonics(
     uint8_t next_group = 0;
     slip39_group groups[16];
 
-    uint8_t *next_share = buffer;
-    uint32_t buffer_remaining = buffer_length;
+    // allocate enough space on the stack to reconstruct the member shares
+    uint8_t workspace[ (mnemonics_words * mnemonics_shares * 5) / 4 ];
+    uint8_t *next_share = workspace;
+    uint32_t buffer_remaining = (mnemonics_words * mnemonics_shares * 5) / 4;
     uint32_t secret_length = 0;
 
     for(unsigned int i=0; i<mnemonics_shares; ++i) {
@@ -331,6 +333,10 @@ int combine_mnemonics(
     // master secret
     uint8_t gx[16];
     const uint8_t *gy[16];
+
+    // allocate enough space for the group shares and the encrypted master secret
+    uint8_t group_shares[secret_length * (group_threshold + 1)];
+    next_share = group_shares;
 
     for(uint8_t i=0; i<next_group; ++i) {
         gx[i] = groups[i].group_index;
