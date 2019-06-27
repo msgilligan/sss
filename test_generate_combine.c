@@ -1,6 +1,8 @@
 #include "slip39.h"
 
-void test_generate_combine() {
+void test_generate_combine(void);
+
+void test_generate_combine(void) {
     char *test = "abcdefghijklmnopqrstuvwxyz.";
     unsigned int secret_length = strlen(test)+1;
 
@@ -49,6 +51,7 @@ void test_generate_combine() {
     printf("%s\n", buffer);
 }
 
-int main() {
+int main(void) {
     test_generate_combine();
+    return 0;
 }

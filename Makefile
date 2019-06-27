@@ -28,7 +28,7 @@ slip39_tests.c: vectors_to_tests.js vectors.json
 
 slip39_tests.o: slip39_tests.c
 
-slip39_tests: slip39_tests.o gf256.o gf256_interpolate.o slip39_wordlist.o slip39_rs1024.o \
+slip39_tests.out: slip39_tests.o gf256.o gf256_interpolate.o slip39_wordlist.o slip39_rs1024.o \
      slip39_shamir.o slip39_mnemonics.o test_random.o slip39_encrypt.o
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ -l crypto
 	$(MEMCHECK) ./$@
@@ -81,8 +81,8 @@ test_generate_combine.out: test_generate_combine.o gf256.o gf256_interpolate.o s
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -l crypto
 	$(MEMCHECK) ./$@
 
-check_slip39: test_gf256.out test_gf256_interpolate.out test_slip39_wordlist.out test_slip39_shamir.out test_slip39_encrypt.out
-
+check_slip39: test_gf256.out test_gf256_interpolate.out test_slip39_wordlist.out \
+    test_slip39_shamir.out test_slip39_encrypt.out test_generate_combine.out slip39_tests.out
 
 .PHONY: check check_slip39
 check: test_hazmat.out test_sss.out
@@ -90,4 +90,4 @@ check: test_hazmat.out test_sss.out
 .PHONY: clean
 clean:
 	$(MAKE) -C randombytes $@
-	$(RM) *.o *.gch *.a *.out
+	$(RM) *.o *.gch *.a *.out slip39_tests.c
