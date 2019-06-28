@@ -167,7 +167,7 @@ int generate_mnemonics(
 
     uint8_t encrypted_master_secret[master_secret_length];
 
-    encrypt(master_secret,master_secret_length,passphrase,iteration_exponent,identifier, encrypted_master_secret);
+    slip39_encrypt(master_secret,master_secret_length,passphrase,iteration_exponent,identifier, encrypted_master_secret);
 
     uint8_t group_shares[master_secret_length * groups_length];
 
@@ -209,6 +209,9 @@ int generate_mnemonics(
                 word_count = words;
             } else {
                 if(word_count != words) {
+                    memset(member_shares, 0, sizeof(member_shares));
+                    memset(encrypted_master_secret, 0, sizeof(encrypted_master_secret));
+                    memset(group_shares, 0, sizeof(group_shares));
                     return ERROR_INVALID_SHARE_SET;
                 }
             }
@@ -217,7 +220,13 @@ int generate_mnemonics(
             mnemonic += word_count;
 
         }
+
+        memset(member_shares, 0, sizeof(member_shares));
+        
     }
+
+    memset(encrypted_master_secret, 0, sizeof(encrypted_master_secret));
+    memset(group_shares, 0, sizeof(group_shares));
 
     // store the number of words in each share
     *mnemonic_length = word_count;
@@ -365,15 +374,20 @@ int combine_mnemonics(
 
         next_share += recovery;
     }
-
+    
     int recovery = recover_secret(group_threshold, gx, gy, secret_length, next_share);
 
+    memset(workspace,0,sizeof(workspace));
+    
     if(recovery < 0) {
+        memset(group_shares,0,sizeof(group_shares));
         return recovery;
     }
 
     // decrypt copy the result to the beinning of the buffer supplied
-    decrypt(next_share, secret_length, passphrase, iteration_exponent, identifier, buffer);
+    slip39_decrypt(next_share, secret_length, passphrase, iteration_exponent, identifier, buffer);
+
+    memset(group_shares,0,sizeof(group_shares));
 
     // TODO: clean up scratch memory
     return secret_length;
@@ -388,7 +402,7 @@ void encrypt_share(
     const char *passphrase
 ) {
     uint8_t temp[share->value_length];
-    encrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
+    slip39_encrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
     memcpy(share->value, temp, share->value_length);        
 }
 
@@ -397,6 +411,6 @@ void decrypt_share(
     const char * passphrase
 ) {
     uint8_t temp[share->value_length];
-    decrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
+    slip39_decrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
     memcpy(share->value, temp, share->value_length);        
 }

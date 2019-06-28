@@ -101,7 +101,7 @@ void feistel(
     }
 }
 
-void encrypt(
+void slip39_encrypt(
     const uint8_t *input,
     uint32_t input_length,
     const char *passphrase,
@@ -112,7 +112,7 @@ void encrypt(
     feistel(1, input, input_length, passphrase, iteration_exponent, identifier, output);
 }
 
-void decrypt(
+void slip39_decrypt(
     const uint8_t *input,
     uint32_t input_length,
     const char *passphrase,

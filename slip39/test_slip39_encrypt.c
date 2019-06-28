@@ -36,14 +36,14 @@ uint8_t test_encrypt_function(void) {
     char *input = "abcd";
     uint8_t output[4];
 
-    encrypt((uint8_t *)input, 4, "", 0, 1234, output);
+    slip39_encrypt((uint8_t *)input, 4, "", 0, 1234, output);
 
     if(!(output[0] == 167 && output[1] == 251 && output[2]==61 && output[3] == 147)) {
         fail = 1;
     }
 
 
-    encrypt((uint8_t *)input, 4, "TREZOR", 0, 1234, output);
+    slip39_encrypt((uint8_t *)input, 4, "TREZOR", 0, 1234, output);
     if( !(output[0] == 41 && output[1] == 155 && output[2]==1 && output[3] == 50) ) {
         fail = 1;
     }

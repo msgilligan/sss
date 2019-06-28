@@ -181,7 +181,7 @@ void round_function(
 	uint32_t dest_length
 );
 
-void encrypt(
+void slip39_encrypt(
 	const uint8_t *input,
 	uint32_t input_length,
 	const char *passphrase,
@@ -190,7 +190,7 @@ void encrypt(
 	uint8_t *output
 );
 
-void decrypt(
+void slip39_decrypt(
 	const uint8_t *input,
 	uint32_t input_length,
 	const char *passphrase,

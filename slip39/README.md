@@ -46,5 +46,27 @@ fromWords functions do/check the appropriate left padding of bits described in s
 slip39_wordlist_english.h contains the actual word list used.
 
 There are various and sundry test files that test key parts of the implementation. You can
-build and run them all by building the make target 'check_slip39'. 
+build and run them all by building the make target 'check'. 
 
+There is also a quick and dirty command line. You can build it with the make target 'slip39'. Here
+is a sample of running it to generate a share set and then combine some of those shares
+back into the default secret 'totally secret!':
+```bash
+chris@rebma:~/projects/shamir/sss/slip39$ ./slip39 generate 2 2of3 3of5
+research romp acrobat echo armed decrease slush random cubic miracle dive exchange biology strategy bulb idea shrimp likely machine starting
+research romp acrobat email advocate academic gesture herd geology artist crystal liberty scandal smith amount costume endorse genuine steady have
+research romp acrobat entrance beam fangs window bolt identify receiver large saver indicate view dive gesture believe salary prize laser
+research romp beard eclipse closet jacket argue silver smirk garlic railroad tadpole wireless flame cover blessing worthy criminal penalty upgrade
+research romp beard emerald always blanket calcium forecast photo picture election curly quarter coding equip beam always spray goat become
+research romp beard envelope award presence adapt engage mustang language domestic ocean sympathy prisoner painting document username view mountain random
+research romp beard exact chemical ruin away squeeze wrote remove skin hairy mouse syndrome royal easel airline ancestor famous favorite
+research romp beard eyebrow cinema verify skunk oasis senior endless ting round ting sugar inherit sugar true image keyboard estimate
+chris@rebma:~/projects/shamir/sss/slip39$ ./slip39 combine
+research romp acrobat echo armed decrease slush random cubic miracle dive exchange biology strategy bulb idea shrimp likely machine starting
+research romp acrobat email advocate academic gesture herd geology artist crystal liberty scandal smith amount costume endorse genuine steady have
+research romp beard envelope award presence adapt engage mustang language domestic ocean sympathy prisoner painting document username view mountain random
+research romp beard exact chemical ruin away squeeze wrote remove skin hairy mouse syndrome royal easel airline ancestor famous favorite
+research romp beard eyebrow cinema verify skunk oasis senior endless ting round ting sugar inherit sugar true image keyboard estimate
+totally secret!
+chris@rebma:~/projects/shamir/sss/slip39$
+```

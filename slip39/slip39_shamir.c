@@ -91,6 +91,10 @@ int32_t split_secret(
                 return ERROR_INTERPOLATION_FAILURE;
             }
         }
+
+        memset(digest, 0, sizeof(digest));
+        memset(x, 0, sizeof(x));
+        memset(y, 0, sizeof(y));
     }
     return share_count;
 }
@@ -118,6 +122,10 @@ int32_t recover_secret(
     if( interpolate(threshold, x, share_length, shares, DIGEST_INDEX, digest) < 0 ||
         interpolate(threshold, x, share_length, shares, SECRET_INDEX, secret) < 0
     ) {
+        memset(secret, 0, sizeof(digest));
+        memset(digest, 0, sizeof(digest));
+        memset(verify, 0, sizeof(verify));    
+    
         return ERROR_INTERPOLATION_FAILURE;
     }
 
@@ -127,8 +135,13 @@ int32_t recover_secret(
         valid &= digest[i] == verify[i];
     }
 
+
+    memset(digest, 0, sizeof(digest));
+    memset(verify, 0, sizeof(verify));    
+
     if(!valid) {
         return ERROR_CHECKSUM_FAILURE;
     }
+    
     return share_length;
 }

@@ -51,4 +51,4 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-slip39_tests.c
+slip39/slip39
