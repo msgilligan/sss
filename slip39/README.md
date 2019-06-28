@@ -8,25 +8,21 @@ standard for doing so:
 
 Along with the proposed specification, they also have provided a
 [python reference implementation](https://github.com/trezor/python-shamir-mnemonic)
-and a set of 
+and a set of
 [sest vectors](https://github.com/trezor/python-shamir-mnemonic/blob/master/vectors.json).
 
 This branch intends to provide an implementation of the specification in C. Note that SLIP39
 differs from standard implementations of Shamir Sharing in a couple of ways - it adds some
-digest checking that allows you to give you some assurance that the result is correct at 
+digest checking that allows you to give you some assurance that the result is correct at
 the expense of a few bits of security, it has a two-level grouping scheme, etc. At its heart,
 it ends up making more use of polynomical interpolation than other implementations do.
 
 The file vectors_to_tests.js contains some javascript that uses the published test vectors
 to produce C code that can be used to verify that the code implements the spec.
 
-gf256.c provides a naive, table-lookup implementation of gf256 operations. 
-
-gf256_interpolate.c provides an implementation for interpolating a polynomial going 
-through n arbitray points at an arbitrary x-coordinate. The y-coordinates are represented
-as arrays of gf256 values, and while this implementation does calculations byte-by-byte,
-it is probably feasible to adapt this implementation to using the bit-slicing approach
-used in hazmat.c to give an implementation with fewer side-channel attacks.
+hazmat.c provides a side-channel attack resistant implementation of gf256 operations
+32 elements at a time, with a couple of additional functions dealing with lagrange
+polynomials and polynomial interpolation.
 
 test_random.c implements some code to act as filler for random number generation when testing.
 It is clearly not designed to be used in any real life application.
@@ -41,12 +37,12 @@ imbedding a digest into the shares which requires a sha256. Again this implement
 on openssl for sha256.
 
 slip39_wordlists.c implements functions for converting byte buffers to wordlists and
-and the encoding and decoding of slip39 words into 10-bit integers. the toWords and 
+and the encoding and decoding of slip39 words into 10-bit integers. the toWords and
 fromWords functions do/check the appropriate left padding of bits described in slip39.
 slip39_wordlist_english.h contains the actual word list used.
 
 There are various and sundry test files that test key parts of the implementation. You can
-build and run them all by building the make target 'check'. 
+build and run them all by building the make target 'check'.
 
 There is also a quick and dirty command line. You can build it with the make target 'slip39'. Here
 is a sample of running it to generate a share set and then combine some of those shares

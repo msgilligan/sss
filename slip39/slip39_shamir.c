@@ -1,5 +1,5 @@
 #include "slip39.h"
-#include "gf256_interpolate.h"
+#include "hazmat.h"
 
 //////////////////////////////////////////////////
 // hmac sha256
@@ -124,8 +124,8 @@ int32_t recover_secret(
     ) {
         memset(secret, 0, sizeof(digest));
         memset(digest, 0, sizeof(digest));
-        memset(verify, 0, sizeof(verify));    
-    
+        memset(verify, 0, sizeof(verify));
+
         return ERROR_INTERPOLATION_FAILURE;
     }
 
@@ -137,11 +137,11 @@ int32_t recover_secret(
 
 
     memset(digest, 0, sizeof(digest));
-    memset(verify, 0, sizeof(verify));    
+    memset(verify, 0, sizeof(verify));
 
     if(!valid) {
         return ERROR_CHECKSUM_FAILURE;
     }
-    
+
     return share_length;
 }
