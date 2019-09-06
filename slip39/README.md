@@ -69,3 +69,18 @@ research romp beard eyebrow cinema verify skunk oasis senior endless ting round 
 totally secret!
 chris@rebma:~/projects/shamir/sss/slip39$
 ```
+
+TODOs:
+
+This is a list of todos for howech to complete in the near future after
+the RWO9 conference:
+
+* Update comments
+
+* consider fixing the pedigree of hazmat.c
+
+* ensure that there are binary format api calls for dealing with binary format shares
+
+* look at reconsiling readmes
+
+* consider pr replacing parent sss directory with slip39 directory
