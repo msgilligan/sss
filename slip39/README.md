@@ -22,7 +22,10 @@ to produce C code that can be used to verify that the code implements the spec.
 
 hazmat.c provides a side-channel attack resistant implementation of gf256 operations
 32 elements at a time, with a couple of additional functions dealing with lagrange
-polynomials and polynomial interpolation.
+polynomials and polynomial interpolation. Note that this file was copied from
+the Daan's original implementation of the hazmat code in the outer directory, and
+then his inperpolation functions were removed and new lagrange and interpolation
+functions added.
 
 test_random.c implements some code to act as filler for random number generation when testing.
 It is clearly not designed to be used in any real life application.
