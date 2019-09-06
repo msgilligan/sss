@@ -3,7 +3,8 @@ uint8_t test_split_recover(void);
 
 uint8_t test_split_recover(void) {
     uint8_t fail = 0;
-    char *test = "The quick brown fox jumped over the lazy dog.";
+    // secret can only be 32 bytes long...
+    char *test = "The quick brown fox jumped ove"; //r the lazy dog.";
 
     uint8_t shares[512];
     uint8_t secret[50];
