@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////
 // encode mnemonic
 unsigned int encode_mnemonic(
-    const slip39_share *share,
+    const slip39_shard *shard,
     uint16_t *destination,
     uint32_t destination_length) {
 
@@ -12,17 +12,17 @@ unsigned int encode_mnemonic(
     // [w0:10][  w1:10][w2:10                      ][w3:10                     ]
 
     // change offset and clip group and member coordinate data
-    uint16_t gt = (share->group_threshold -1) & 15;
-    uint16_t gc = (share->group_count -1) & 15;
-    uint16_t mi = (share->member_index) & 15;
-    uint16_t mt = (share->member_threshold -1) & 15;
+    uint16_t gt = (shard->group_threshold -1) & 15;
+    uint16_t gc = (shard->group_count -1) & 15;
+    uint16_t mi = (shard->member_index) & 15;
+    uint16_t mt = (shard->member_threshold -1) & 15;
 
-    destination[0] = (share->identifier >> 5) & 1023;
-    destination[1] = ((share->identifier << 5) | share->iteration_exponent) & 1023;
-    destination[2] = ((share->group_index << 6) | (gt << 2) | (gc >> 2)) & 1023;
+    destination[0] = (shard->identifier >> 5) & 1023;
+    destination[1] = ((shard->identifier << 5) | shard->iteration_exponent) & 1023;
+    destination[2] = ((shard->group_index << 6) | (gt << 2) | (gc >> 2)) & 1023;
     destination[3] = ((gc << 8) | (mi << 4) | (mt)) & 1023;
 
-    uint32_t words = toWords(share->value, share->value_length, destination+4, destination_length - METADATA_LENGTH_WORDS);
+    uint32_t words = toWords(shard->value, shard->value_length, destination+4, destination_length - METADATA_LENGTH_WORDS);
     rs1024_create_checksum(destination, words + METADATA_LENGTH_WORDS);
 
     return words+METADATA_LENGTH_WORDS;
@@ -33,7 +33,7 @@ unsigned int encode_mnemonic(
 unsigned int decode_mnemonic(
     const uint16_t *mnemonic,
     uint32_t mnemonic_length,
-    slip39_share *share
+    slip39_shard *shard
 ) {
     if(mnemonic_length < MIN_MNEMONIC_LENGTH_WORDS) {
         return ERROR_NOT_ENOUGH_MNEMONIC_WORDS;
@@ -43,28 +43,28 @@ unsigned int decode_mnemonic(
         return ERROR_INVALID_MNEMONIC_CHECKSUM;
     }
 
-    uint8_t gt = ((mnemonic[2] >> 2) & 15) +1;
-    uint8_t gc = (((mnemonic[2]&3) << 2) | ((mnemonic[3]>>8)&3)) +1;
+    uint8_t group_threshold = ((mnemonic[2] >> 2) & 15) +1;
+    uint8_t group_count = (((mnemonic[2]&3) << 2) | ((mnemonic[3]>>8)&3)) +1;
 
-    if(gt > gc) {
+    if(group_threshold > group_count) {
         return ERROR_INVALID_MNEMONIC_GROUP_THRESHOLD;
     }
 
-    share->identifier = mnemonic[0] << 5 | mnemonic[1] >> 5;
-    share->iteration_exponent = mnemonic[1] & 31;
-    share->group_index = mnemonic[2] >> 6;
-    share->group_threshold = gt;
-    share->group_count = gc;
-    share->member_index = (mnemonic[3]>>4) & 15;
-    share->member_threshold = (mnemonic[3]&15) + 1;
-    share->value_length=fromWords(mnemonic+4, mnemonic_length - 7, share->value, share->value_length);
-    if(share->value_length < MIN_STRENGTH_BYTES) {
+    shard->identifier = mnemonic[0] << 5 | mnemonic[1] >> 5;
+    shard->iteration_exponent = mnemonic[1] & 31;
+    shard->group_index = mnemonic[2] >> 6;
+    shard->group_threshold = group_threshold;
+    shard->group_count = group_count;
+    shard->member_index = (mnemonic[3]>>4) & 15;
+    shard->member_threshold = (mnemonic[3]&15) + 1;
+    shard->value_length=fromWords(mnemonic+4, mnemonic_length - 7, shard->value, 32);
+    if(shard->value_length < MIN_STRENGTH_BYTES) {
         return ERROR_SECRET_TOO_SHORT;
     }
-    if(share->value_length % 2) {
+    if(shard->value_length % 2) {
         return ERROR_INVALID_SECRET_LENGTH;
     }
-    return share->value_length;
+    return shard->value_length;
 }
 
 
@@ -87,32 +87,55 @@ void print_mnemonic(
     const uint16_t *mnemonic,
     unsigned int mnemonic_length
 ) {
-    uint8_t value[256];
+    slip39_shard shard;
+    shard.value_length = 32;
 
-    slip39_share share;
-    share.value = value;
-    share.value_length = 256;
-
-    unsigned int secret_length = decode_mnemonic(mnemonic, mnemonic_length, &share);
-    share.value_length = secret_length;
+    unsigned int secret_length = decode_mnemonic(mnemonic, mnemonic_length, &shard);
+    shard.value_length = secret_length;
 
     for(unsigned int i=0;i< mnemonic_length; ++i) {
         printf("%s ", slip39_word(mnemonic[i]));
     }
 
     printf("\n");
-    printf("identifier: %d  exponent: %d\n", share.identifier, share.iteration_exponent);
+    printf("identifier: %d  exponent: %d\n", shard.identifier, shard.iteration_exponent);
     printf("group index: %d  threshold: %d  count: %d\n",
-        share.group_index, share.group_threshold, share.group_count);
+        shard.group_index, shard.group_threshold, shard.group_count);
     printf("member index: %d  threshold: %d\n",
-        share.member_index, share.member_threshold);
-    print_hex(share.value, share.value_length);
+        shard.member_index, shard.member_threshold);
+    print_hex(shard.value, shard.value_length);
+}
+
+int count_shards(uint8_t group_threshold, const group_descriptor *groups, uint8_t groups_length);
+
+int count_shards(
+    uint8_t group_threshold,
+    const group_descriptor *groups,
+    uint8_t groups_length
+) {
+    uint16_t total_shards = 0;
+
+    if(group_threshold > groups_length) {
+        return ERROR_INVALID_GROUP_THRESHOLD;
+    }
+
+    for(uint8_t i=0; i<groups_length; ++i) {
+        total_shards += groups[i].count;
+        if( groups[i].threshold > groups[i].count ) {
+            return ERROR_INVALID_MEMBER_THRESHOLD;
+        }
+        if( groups[i].threshold == 1 && groups[i].count > 1) {
+            return ERROR_INVALID_SINGLETON_MEMBER;
+        }
+    }
+
+    return total_shards;
 }
 
 //////////////////////////////////////////////////
-// generate mnemonics
+// generate shards
 //
-int generate_mnemonics(
+int generate_shards(
     uint8_t group_threshold,
     const group_descriptor *groups,
     uint8_t groups_length,
@@ -120,13 +143,22 @@ int generate_mnemonics(
     uint32_t master_secret_length,
     const char *passphrase,
     uint8_t iteration_exponent,
-    uint32_t *mnemonic_length,
-    uint16_t *mnemonics,
-    uint32_t buffer_size
+    slip39_shard *shards,
+    uint16_t shards_size
 ) {
 
     if(master_secret_length < MIN_STRENGTH_BYTES) {
         return ERROR_SECRET_TOO_SHORT;
+    }
+
+    if(master_secret_length % 2 == 1) {
+        return ERROR_INVALID_SECRET_LENGTH;
+    }
+
+    // Figure out how many shards we are dealing with
+    int total_shards = count_shards(group_threshold, groups, groups_length);
+    if(total_shards < 0) {
+        return total_shards;
     }
 
     // assign a random identifier
@@ -134,20 +166,7 @@ int generate_mnemonics(
     randombytes((uint8_t *)(&identifier), 2);
     identifier = identifier & ((1<<15)-1);
 
-    uint32_t share_length = METADATA_LENGTH_WORDS + bytes_to_words(master_secret_length);
-    uint32_t total_shares = 0;
-
-    for(uint8_t i=0; i<groups_length; ++i) {
-        total_shares += groups[i].count;
-        if( groups[i].threshold > groups[i].count ) {
-            return ERROR_INVALID_GROUP_THRESHOLD;
-        }
-        if( groups[i].threshold == 1 && groups[i].count > 1) {
-            return ERROR_INVALID_SINGLETOM_MEMBER;
-        }
-    }
-
-    if(buffer_size < share_length * total_shares) {
+    if(shards_size < total_shards) {
         return ERROR_INSUFFICIENT_SPACE;
     }
 
@@ -175,64 +194,115 @@ int generate_mnemonics(
 
     uint8_t *group_share = group_shares;
 
-    uint16_t *mnemonic = mnemonics;
-    unsigned int remaining_buffer = buffer_size;
-
-     unsigned int word_count = 0;
-     unsigned int share_count = 0;
-
-    slip39_share share;
-    share.identifier = identifier;
-    share.iteration_exponent = iteration_exponent;
-    share.group_threshold = group_threshold;
-    share.group_count = groups_length;
-    share.value_length = master_secret_length;
+    unsigned int shard_count = 0;
+    slip39_shard *shard = &shards[shard_count];
 
     for(uint8_t i=0; i<groups_length; ++i, group_share += master_secret_length) {
-        uint8_t member_shares[master_secret_length * groups[i].count ];
+        uint8_t member_shares[master_secret_length *groups[i].count];
         split_secret(groups[i].threshold, groups[i].count, group_share, master_secret_length, member_shares);
-        share.group_index = i;
-        share.member_threshold = groups[i].threshold;
 
         uint8_t *value = member_shares;
         for(uint8_t j=0; j< groups[i].count; ++j, value += master_secret_length) {
-            share.member_index = j;
-            share.value = value;
+            shard = &shards[shard_count];
+
+            shard->identifier = identifier;
+            shard->iteration_exponent = iteration_exponent;
+            shard->group_threshold = group_threshold;
+            shard->group_count = groups_length;
+            shard->value_length = master_secret_length;
+            shard->group_index = i;
+            shard->member_threshold = groups[i].threshold;
+            shard->member_index = j;
+            memset(shard->value, 0, 32);
+            memcpy(shard->value, value, master_secret_length);
 
             if(groups[i].passwords && groups[i].passwords[j]) {
-                encrypt_share(&share, groups[i].passwords[j]);
+                encrypt_shard(shard, groups[i].passwords[j]);
             }
-            
-            unsigned int words = encode_mnemonic(&share, mnemonic, remaining_buffer);
 
-            if(word_count == 0) {
-                word_count = words;
-            } else {
-                if(word_count != words) {
-                    memset(member_shares, 0, sizeof(member_shares));
-                    memset(encrypted_master_secret, 0, sizeof(encrypted_master_secret));
-                    memset(group_shares, 0, sizeof(group_shares));
-                    return ERROR_INVALID_SHARE_SET;
-                }
-            }
-            remaining_buffer -= word_count;
-            share_count++;
-            mnemonic += word_count;
-
+            shard_count++;
         }
 
+        // clean up
         memset(member_shares, 0, sizeof(member_shares));
-        
     }
 
+    // clean up stack
     memset(encrypted_master_secret, 0, sizeof(encrypted_master_secret));
     memset(group_shares, 0, sizeof(group_shares));
 
-    // store the number of words in each share
-    *mnemonic_length = word_count;
+    // return the number of shards generated
+    return shard_count;
+}
 
-    // return the number of shares generated
-    return share_count;
+//////////////////////////////////////////////////
+// generate mnemonics
+//
+int generate_mnemonics(
+    uint8_t group_threshold,
+    const group_descriptor *groups,
+    uint8_t groups_length,
+    const uint8_t *master_secret,
+    uint32_t master_secret_length,
+    const char *passphrase,
+    uint8_t iteration_exponent,
+    uint32_t *mnemonic_length,
+    uint16_t *mnemonics,
+    uint32_t buffer_size
+) {
+    if(master_secret_length < MIN_STRENGTH_BYTES) {
+        return ERROR_SECRET_TOO_SHORT;
+    }
+
+    // Figure out how many shards we are dealing with
+    int total_shards = count_shards(group_threshold, groups, groups_length);
+    if(total_shards < 0) {
+        return total_shards;
+    }
+
+    // figure out how much space we need to store all of the mnemonics
+    // and make sure that we were provided with sufficient resources
+    uint32_t shard_length = METADATA_LENGTH_WORDS + bytes_to_words(master_secret_length);
+    if(buffer_size < shard_length * total_shards) {
+        return ERROR_INSUFFICIENT_SPACE;
+    }
+
+    int error = 0;
+
+    // allocate space for shard representations
+    slip39_shard shards[total_shards];
+
+    // generate shards
+    total_shards = generate_shards(group_threshold, groups, groups_length, master_secret, master_secret_length,
+        passphrase, iteration_exponent, shards, total_shards);
+
+    if(total_shards < 0) {
+        error = total_shards;
+    }
+
+    uint16_t *mnemonic = mnemonics;
+    unsigned int remaining_buffer = buffer_size;
+    unsigned int word_count = 0;
+
+    for(uint16_t i =0; !error && i<total_shards ; ++i) {
+        int words = encode_mnemonic(&shards[i], mnemonic, remaining_buffer);
+        if(words < 0) {
+            error = words;
+            break;
+        }
+        word_count = words;
+        remaining_buffer -= word_count;
+        mnemonic += word_count;
+    }
+
+    memset(shards,0,sizeof(shards));
+    if(error) {
+        memset(mnemonics, 0, buffer_size);
+        return 0;
+    }
+
+    *mnemonic_length = word_count;
+    return total_shards;
 }
 
 
@@ -246,171 +316,238 @@ void print_group(slip39_group *g, unsigned int secret_length) {
 }
 
 
+
+
 /////////////////////////////////////////////////
-// combine_mnemonics
-int combine_mnemonics(
-    const uint16_t **mnemonics, // array of pointers to 10-bit words
-    uint32_t mnemonics_words,   // number of words in each share
-    uint32_t mnemonics_shares,  // total number of shares
+// combine_shards
+int combine_shards_internal(
+    slip39_shard *shards, // array of shard structures
+    uint16_t shards_count,      // number of shards in array
     const char *passphrase,     // passphrase to unlock master secret
-    const char **passwords,     // passwords for the shares
+    const char **passwords,     // passwords for the shards
+    uint8_t *buffer,            // working space, and place to return secret
+    uint32_t buffer_length      // total amount of working space
+);
+
+
+int combine_shards(
+    const slip39_shard *shards, // array of shard structures
+    uint16_t shards_count,      // number of shards in array
+    const char *passphrase,     // passphrase to unlock master secret
+    const char **passwords,     // passwords for the shards
     uint8_t *buffer,            // working space, and place to return secret
     uint32_t buffer_length      // total amount of working space
 ) {
+    if(shards_count == 0) {
+        return ERROR_EMPTY_MNEMONIC_SET;
+    }
+
+    slip39_shard working_shards[shards_count];
+    memcpy(working_shards, shards, sizeof(working_shards));
+
+    int result = combine_shards_internal(working_shards, shards_count, passphrase, passwords, buffer, buffer_length);
+
+    memset(working_shards,0, sizeof(working_shards));
+
+    return result;
+}
+
+int combine_shards_internal(
+    slip39_shard *shards,       // array of shard structures
+    uint16_t shards_count,      // number of shards in array
+    const char *passphrase,     // passphrase to unlock master secret
+    const char **passwords,     // passwords for the shards
+    uint8_t *buffer,            // working space, and place to return secret
+    uint32_t buffer_length      // total amount of working space
+) {
+    int error = 0;
     uint16_t identifier;
     uint8_t iteration_exponent;
     uint8_t group_threshold;
     uint8_t group_count;
 
-    if(mnemonics_shares == 0) {
+    if(shards_count == 0) {
         return ERROR_EMPTY_MNEMONIC_SET;
     }
 
     uint8_t next_group = 0;
     slip39_group groups[16];
+    uint8_t secret_length = 0;
 
-    // allocate enough space on the stack to reconstruct the member shares
-    uint8_t workspace[ (mnemonics_words * mnemonics_shares * 5) / 4 ];
-    uint8_t *next_share = workspace;
-    uint32_t buffer_remaining = (mnemonics_words * mnemonics_shares * 5) / 4;
-    uint32_t secret_length = 0;
-
-    for(unsigned int i=0; i<mnemonics_shares; ++i) {
-        slip39_share share;
-        share.value = next_share;
-        share.value_length = buffer_remaining;
-
-        int32_t bytes = decode_mnemonic(mnemonics[i], mnemonics_words, &share);
-
-        if(bytes < 0) {
-            // pass the error code on
-            return bytes;
-        }
-
+    for(unsigned int i=0; !error && i<shards_count; ++i) {
+        slip39_shard *shard = &shards[i];
         if(passwords && passwords[i]) {
-            decrypt_share(&share, passwords[i]);
+            decrypt_shard(shard, passwords[i]);
         }
-        
-        // advance pointers into free buffer
-        buffer_remaining -= bytes;
-        secret_length = bytes;
-        next_share += bytes;
 
         if( i == 0) {
             // on the first one, establish expected values for common metadata
-            identifier = share.identifier;
-            iteration_exponent = share.iteration_exponent;
-            group_count = share.group_count;
-            group_threshold = share.group_threshold;
+            identifier = shard->identifier;
+            iteration_exponent = shard->iteration_exponent;
+            group_count = shard->group_count;
+            group_threshold = shard->group_threshold;
+            secret_length = shard->value_length;
         } else {
-            // on subsequent shares, check that common metadata matches
-            if( share.identifier != identifier ||
-                share.iteration_exponent != iteration_exponent ||
-                share.group_threshold != group_threshold ||
-                share.group_count != group_count
+            // on subsequent shards, check that common metadata matches
+            if( shard->identifier != identifier ||
+                shard->iteration_exponent != iteration_exponent ||
+                shard->group_threshold != group_threshold ||
+                shard->group_count != group_count ||
+                shard->value_length != secret_length
             ) {
-                return ERROR_INVALID_SHARE_SET;
+                return ERROR_INVALID_SHARD_SET;
             }
         }
 
-        // sort shares into member groups
+        // sort shards into member groups
         uint8_t group_found = 0;
         for(uint8_t j=0; j<next_group; ++j) {
-            if(share.group_index == groups[j].group_index) {
+            if(shard->group_index == groups[j].group_index) {
                 group_found = 1;
-                if(share.member_threshold != groups[j].member_threshold) {
+                if(shard->member_threshold != groups[j].member_threshold) {
                     return ERROR_INVALID_MEMBER_THRESHOLD;
                 }
                 for(uint8_t k=0; k<groups[j].count; ++k) {
-                    if(share.member_index == groups[j].member_index[k]) {
+                    if(shard->member_index == groups[j].member_index[k]) {
                         return ERROR_DUPLICATE_MEMBER_INDEX;
                     }
                 }
-                groups[j].member_index[groups[j].count] = share.member_index;
-                groups[j].value[groups[j].count] = share.value;
+                groups[j].member_index[groups[j].count] = shard->member_index;
+                groups[j].value[groups[j].count] = shard->value;
                 groups[j].count++;
             }
         }
 
         if(!group_found) {
-            groups[next_group].group_index = share.group_index;
-            groups[next_group].member_threshold = share.member_threshold;
-            groups[next_group].count =1;
-            groups[next_group].member_index[0] = share.member_index;
-            groups[next_group].value[0] = share.value;
+            groups[next_group].group_index = shard->group_index;
+            groups[next_group].member_threshold = shard->member_threshold;
+            groups[next_group].count = 1;
+            groups[next_group].member_index[0] = shard->member_index;
+            groups[next_group].value[0] = shard->value;
             next_group++;
         }
     }
 
-
-    if(next_group < group_threshold) {
-        return ERROR_NOT_ENOUGH_GROUPS;
+    if(buffer_length < secret_length) {
+        error = ERROR_INSUFFICIENT_SPACE;
+    } else if(next_group < group_threshold) {
+        error = ERROR_NOT_ENOUGH_GROUPS;
     }
-    
-    // here, all of the shares are unpacked into member groups. Now we go through each
+
+    // here, all of the shards are unpacked into member groups. Now we go through each
     // group and recover the group secret, and then use the result to recover the
     // master secret
     uint8_t gx[16];
     const uint8_t *gy[16];
 
-    // allocate enough space for the group shares and the encrypted master secret
+    // allocate enough space for the group shards and the encrypted master secret
     uint8_t group_shares[secret_length * (group_threshold + 1)];
-    next_share = group_shares;
+    uint8_t *group_share = group_shares;
 
-    for(uint8_t i=0; i<next_group; ++i) {
+    for(uint8_t i=0; !error && i<next_group; ++i) {
         gx[i] = groups[i].group_index;
         if(groups[i].count < groups[i].member_threshold) {
-            return ERROR_NOT_ENOUGH_MEMBER_SHARES;
+            error = ERROR_NOT_ENOUGH_MEMBER_SHARDS;
+            break;
         }
 
         int recovery = recover_secret(
             groups[i].member_threshold, groups[i].member_index,
-            groups[i].value, secret_length, next_share);
+            groups[i].value, secret_length, group_share);
 
         if(recovery < 0) {
-            return recovery;
+            error = recovery;
+            break;
         }
-        gy[i] = next_share;
+        gy[i] = group_share;
 
-        next_share += recovery;
+        group_share += recovery;
     }
-    
-    int recovery = recover_secret(group_threshold, gx, gy, secret_length, next_share);
 
-    memset(workspace,0,sizeof(workspace));
-    
+    int recovery = 0;
+    if(!error) {
+        recovery = recover_secret(group_threshold, gx, gy, secret_length, group_share);
+    }
+
     if(recovery < 0) {
-        memset(group_shares,0,sizeof(group_shares));
-        return recovery;
+        error = recovery;
     }
 
     // decrypt copy the result to the beinning of the buffer supplied
-    slip39_decrypt(next_share, secret_length, passphrase, iteration_exponent, identifier, buffer);
+    if(!error) {
+        slip39_decrypt(group_share, secret_length, passphrase, iteration_exponent, identifier, buffer);
+    }
 
+    // clean up stack
     memset(group_shares,0,sizeof(group_shares));
+    memset(gx,0,sizeof(gx));
+    memset(gy,0,sizeof(gy));
+    memset(groups,0,sizeof(groups));
 
-    // TODO: clean up scratch memory
+    if(error) {
+        return error;
+    }
+
     return secret_length;
 }
 
 
-////
-// encrypt/decrypt shares
-//
-void encrypt_share(
-    slip39_share *share,
-    const char *passphrase
+/////////////////////////////////////////////////
+// combine_mnemonics
+int combine_mnemonics(
+    const uint16_t **mnemonics, // array of pointers to 10-bit words
+    uint32_t mnemonics_words,   // number of words in each shard
+    uint32_t mnemonics_shards,  // total number of shards
+    const char *passphrase,     // passphrase to unlock master secret
+    const char **passwords,     // passwords for the shards
+    uint8_t *buffer,            // working space, and place to return secret
+    uint32_t buffer_length      // total amount of working space
 ) {
-    uint8_t temp[share->value_length];
-    slip39_encrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
-    memcpy(share->value, temp, share->value_length);        
+    int result = 0;
+\
+    if(mnemonics_shards == 0) {
+        return ERROR_EMPTY_MNEMONIC_SET;
+    }
+
+    slip39_shard shards[mnemonics_shards];
+
+    for(unsigned int i=0; !result && i<mnemonics_shards; ++i) {
+        shards[i].value_length = 32;
+
+        int32_t bytes = decode_mnemonic(mnemonics[i], mnemonics_words, &shards[i]);
+
+        if(bytes < 0) {
+            result = bytes;
+        }
+    }
+
+    if(!result) {
+        result = combine_shards_internal(shards, mnemonics_shards, passphrase, passwords, buffer, buffer_length);
+    }
+
+    memset(shards,0,sizeof(shards));
+
+    return result;
 }
 
-void decrypt_share(
-    slip39_share *share,
+
+////
+// encrypt/decrypt shards
+//
+void encrypt_shard(
+    slip39_shard *shard,
+    const char *passphrase
+) {
+    uint8_t temp[shard->value_length];
+    slip39_encrypt(shard->value, shard->value_length, passphrase, shard->iteration_exponent, shard->identifier, temp);
+    memcpy(shard->value, temp, shard->value_length);
+}
+
+void decrypt_shard(
+    slip39_shard *shard,
     const char * passphrase
 ) {
-    uint8_t temp[share->value_length];
-    slip39_decrypt(share->value, share->value_length, passphrase, share->iteration_exponent, share->identifier, temp);
-    memcpy(share->value, temp, share->value_length);        
+    uint8_t temp[shard->value_length];
+    slip39_decrypt(shard->value, shard->value_length, passphrase, shard->iteration_exponent, shard->identifier, temp);
+    memcpy(shard->value, temp, shard->value_length);
 }

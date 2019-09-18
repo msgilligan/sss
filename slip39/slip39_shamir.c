@@ -42,24 +42,24 @@ uint8_t * create_digest(
 // shamir sharing
 int32_t split_secret(
     uint8_t threshold,
-    uint8_t share_count,
+    uint8_t shard_count,
     const uint8_t *secret,
     uint32_t secret_length,
     uint8_t *result
 ) {
-    if( share_count > MAX_SHARE_COUNT) {
-        return ERROR_TOO_MANY_SHARES;
+    if( shard_count > MAX_SHARD_COUNT) {
+        return ERROR_TOO_MANY_SHARDS;
     }
 
     if(threshold == 1) {
-        // just return share_count copies of the secret
+        // just return shard_count copies of the secret
         uint8_t *share = result;
-        for(uint8_t i=0; i< share_count; ++i, share += secret_length) {
+        for(uint8_t i=0; i< shard_count; ++i, share += secret_length) {
             for(uint8_t j=0; j<secret_length; ++j) {
                 share[j] = secret[j];
             }
         }
-        return share_count;
+        return shard_count;
     } else {
         uint8_t digest[secret_length];
         uint8_t x[16];
@@ -86,7 +86,7 @@ int32_t split_secret(
         y[n] = secret;
         n+=1;
 
-        for(uint8_t i=threshold -2; i<share_count; ++i, share += secret_length) {
+        for(uint8_t i=threshold -2; i<shard_count; ++i, share += secret_length) {
             if(interpolate(n, x, secret_length, y, i, share) < 0) {
                 return ERROR_INTERPOLATION_FAILURE;
             }
@@ -96,7 +96,7 @@ int32_t split_secret(
         memset(x, 0, sizeof(x));
         memset(y, 0, sizeof(y));
     }
-    return share_count;
+    return shard_count;
 }
 
 

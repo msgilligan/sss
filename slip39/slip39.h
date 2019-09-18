@@ -10,7 +10,7 @@
 #define bytes_to_words(n)  ( ( (n) * 8 + RADIX_BITS-1) / RADIX_BITS)
 #define words_to_bytes(n)  ( ( (n) * RADIX_BITS ) / 8)
 
-#define MAX_SHARE_COUNT 16
+#define MAX_SHARD_COUNT 16
 #define CHECKSUM_LENGTH_WORDS 3
 #define DIGEST_LENGTH_BYTES 4
 
@@ -33,20 +33,21 @@
 #define ERROR_SECRET_TOO_SHORT                 -4
 #define ERROR_SECRET_TOO_LONG                  -5
 #define ERROR_INVALID_GROUP_THRESHOLD          -6
-#define ERROR_INVALID_SINGLETOM_MEMBER         -7
+#define ERROR_INVALID_SINGLETON_MEMBER         -7
 #define ERROR_INSUFFICIENT_SPACE               -8
 #define ERROR_INVALID_SECRET_LENGTH            -9
 #define ERROR_INVALID_PASSPHRASE              -10
-#define ERROR_INVALID_SHARE_SET               -11
+#define ERROR_INVALID_SHARD_SET               -11
 #define ERROR_EMPTY_MNEMONIC_SET              -12
 #define ERROR_DUPLICATE_MEMBER_INDEX          -13
-#define ERROR_NOT_ENOUGH_MEMBER_SHARES        -14
+#define ERROR_NOT_ENOUGH_MEMBER_SHARDS        -14
 #define ERROR_INVALID_MEMBER_THRESHOLD        -15
-#define ERROR_TOO_MANY_SHARES                 -16
+#define ERROR_TOO_MANY_SHARDS                 -16
 #define ERROR_INTERPOLATION_FAILURE           -17
 #define ERROR_CHECKSUM_FAILURE                -18
 #define ERROR_INVALID_PADDING                 -19
 #define ERROR_NOT_ENOUGH_GROUPS               -20
+#define ERROR_INVALID_SHARD_BUFFER            -21
 
 #include <stdio.h>
 #include <string.h>
@@ -60,7 +61,7 @@ typedef struct group_descriptor_struct {
 	const char **passwords;
 } group_descriptor;
 
-typedef struct slip39_share_struct {
+typedef struct slip39_shard_struct {
     uint16_t identifier;
     uint8_t iteration_exponent;
     uint8_t group_index;
@@ -68,9 +69,9 @@ typedef struct slip39_share_struct {
     uint8_t group_count;
     uint8_t member_index;
     uint8_t member_threshold;
-    uint8_t *value;
-    uint32_t value_length;
-} slip39_share;
+    uint8_t value_length;
+    uint8_t value[32];
+} slip39_shard;
 
 typedef struct group_struct {
 	uint8_t group_index;
@@ -159,7 +160,7 @@ uint8_t* create_digest(
 // TODO: explain
 int32_t split_secret(
 	uint8_t threshold,
-	uint8_t share_count,
+	uint8_t shard_count,
 	const uint8_t *secret,
 	uint32_t secret_length,
 	uint8_t *result
@@ -170,8 +171,8 @@ int32_t split_secret(
 int32_t recover_secret(
 	uint8_t threshold,
 	const uint8_t *x,
-	const uint8_t **shares,
-	uint32_t share_length,
+	const uint8_t **shards,
+	uint32_t shard_length,
 	uint8_t *secret
 );
 
@@ -211,7 +212,7 @@ void slip39_decrypt(
 //////////////////////////////////////////////////
 // encode mnemonic
 unsigned int encode_mnemonic(
-    const slip39_share *share,
+    const slip39_shard *shard,
     uint16_t *destination,
     uint32_t destination_length
 );
@@ -221,7 +222,7 @@ unsigned int encode_mnemonic(
 unsigned int decode_mnemonic(
 	const uint16_t *mnemonic,
 	uint32_t mnemonic_length,
-	slip39_share *share
+	slip39_shard *shard
 );
 
 void print_hex(
@@ -235,6 +236,67 @@ void print_mnemonic(
 );
 
 void print_group(slip39_group *g, unsigned int secret_length);
+
+/**
+ * generate a set of shards that can be used to reconstuct a secret
+ * using the given group policy
+ *
+ * returns: the number of shards generated if successful,
+ *          or a negative number indicating an error code when unsuccessful
+ *
+ * inputs: group_threshold: the number of groups that need to be satisfied in order
+ *                          to reconstruct the secret
+ *         groups: an array of group descriptors
+ *         groups_length: the length of the groups array
+ *         master_secret: pointer to the secret to split up
+ *         master_secret_length: length of the master secret in bytes.
+ *                               must be >= 16, <= 32, and even.
+ *         passphrase: string to use to encrypt the master secret
+ *         iteration_exponent: exponent to use when calculating the number of rounds of encryption
+ *                             to go through when encrypting the master secret.
+ *         shards: array of shard structures to store the result ing
+ *         shards_size: length of the shards array
+ */
+
+int generate_shards(
+    uint8_t group_threshold,
+    const group_descriptor *groups,
+    uint8_t groups_length,
+    const uint8_t *master_secret,
+    uint32_t master_secret_length,
+    const char *passphrase,
+    uint8_t iteration_exponent,
+    slip39_shard *shards,
+    uint16_t shards_size
+);
+
+/**
+ * combine a set of shards to reconstuct a secret
+ *
+ * returns: the length of the reconstructed secret if successful
+ *          or a negative number indicating an error code when unsuccessful
+ *
+ * inputs: shards: an array of shards to combine
+ *         shards_count: length of the shards array
+ *         passphrase: passphrase to use encrypt the resulting secret
+ *         passwords: array of strings to use to decrypt shard data
+ *                    passing NULL disables password decrypt for all shards
+ *                    passing NULL for the ith password will disable decrypt for the ith shard
+ *                    passing a pointer to a string for the ith shard will cause the ith shard
+ *                    to be decrypted with the string before recombination
+ *         buffer: location to store the result
+ *         buffer_length: maximum space available in buffer
+ */
+
+int combine_shards(
+    const slip39_shard *shards, // array of shard structures
+    uint16_t shards_count,      // number of shards in array
+    const char *passphrase,     // passphrase to unlock master secret
+    const char **passwords,     // passwords for the shards
+    uint8_t *buffer,            // working space, and place to return secret
+    uint32_t buffer_length      // total amount of working space
+);
+
 
 //////////////////////////////////////////////////
 // generate mnemonics
@@ -256,23 +318,66 @@ int generate_mnemonics(
 // combine_mnemonics
 int combine_mnemonics(
 	const uint16_t **mnemonics, // array of pointers to 10-bit words
-	uint32_t mnemonics_words,   // number of words in each share
-	uint32_t mnemonics_shares,  // total number of shares
+	uint32_t mnemonics_words,   // number of words in each shard
+	uint32_t mnemonics_shards,  // total number of shards
 	const char *passphrase,     // passphrase to unlock master secret
-	const char **passwords,     // passwords protecting shares
+	const char **passwords,     // passwords protecting shards
 	uint8_t *buffer,            // working space, and place to return secret
 	uint32_t buffer_length      // total amount of working space
 );
 
 
-void encrypt_share(
-    slip39_share *share,
+void encrypt_shard(
+    slip39_shard *shard,
     const char *passphrase
 );
 
-void decrypt_share(
-    slip39_share *share,
+void decrypt_shard(
+    slip39_shard *shard,
     const char *passphrase
+);
+
+/////////////////////////////////////////////////
+// Binary Buffer Representations
+
+/**
+ * decode a slip39 shard encoded in a binary buffer
+ *
+ * returns: if nothing went wrong, the number of bytes read from the buffer
+ *          if an error ocurred, a negative number indicating one of the following
+ *          error conditions:
+ *            ERROR_INVALID_SHARD_BUFFER
+ *            ERROR_SECRET_TOO_SHORT
+ *            ERROR_SECRET_TOO_LONG
+ *
+ * inputs: shard: a pointer so a slip39_shard which will be populated upon success.
+ *         buffer: a byte buffer containing a binary encoded shard
+ *         buffer_length: the length of the buffer
+ */
+
+int decodeBinaryShare(
+    slip39_shard *shard,
+    const uint8_t *buffer,
+    uint8_t buffer_length
+);
+
+/**
+ * encode a slip39 shard into a binary buffer
+ *
+ * returns: if nothing went wrong, the number of bytes read from the buffer
+ *          if an error ocurred, a negative number indicating one of the following
+ *          error conditions:
+ *            ERROR_INVALID_SHARD_BUFFER
+ *
+ * inputs: shard: a pointer so a slip39_shard which will be populated upon success.
+ *         buffer: a byte buffer containing a binary encoded shard
+ *         buffer_length: the length of the buffer
+ */
+
+int encodeBinaryShare(
+    uint8_t *buffer,
+    uint32_t buffer_length,
+    const slip39_shard *shard
 );
 
 #endif
