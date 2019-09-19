@@ -115,7 +115,7 @@ round function.
 # TODOs:
 
 This is a list of todos for howech to complete in the near future after
-the RWO9 conference:
+the RWOT9 conference:
 
 * look at reconsiling readmes
 
