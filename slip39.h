@@ -163,7 +163,7 @@ int32_t from_words(
  * inputs: dest: location to write random bytes to
  *         count: number of bytes to write
  */
-void randombytes(uint8_t *dest, uint32_t count);
+int randombytes(void *buf, size_t n);
 
 /**
  * creates an hmac from the data, storing it in the result field
