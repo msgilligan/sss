@@ -2,7 +2,7 @@
 
 //////////////////////////////////////////////////
 // encode mnemonic
-unsigned int encode_mnemonic(
+int encode_mnemonic(
     const slip39_shard *shard,
     uint16_t *destination,
     uint32_t destination_length) {
@@ -22,7 +22,7 @@ unsigned int encode_mnemonic(
     destination[2] = ((shard->group_index << 6) | (gt << 2) | (gc >> 2)) & 1023;
     destination[3] = ((gc << 8) | (mi << 4) | (mt)) & 1023;
 
-    uint32_t words = toWords(shard->value, shard->value_length, destination+4, destination_length - METADATA_LENGTH_WORDS);
+    uint32_t words = to_words(shard->value, shard->value_length, destination+4, destination_length - METADATA_LENGTH_WORDS);
     rs1024_create_checksum(destination, words + METADATA_LENGTH_WORDS);
 
     return words+METADATA_LENGTH_WORDS;
@@ -30,7 +30,7 @@ unsigned int encode_mnemonic(
 
 //////////////////////////////////////////////////
 // decode mnemonic
-unsigned int decode_mnemonic(
+int decode_mnemonic(
     const uint16_t *mnemonic,
     uint32_t mnemonic_length,
     slip39_shard *shard
@@ -57,7 +57,7 @@ unsigned int decode_mnemonic(
     shard->group_count = group_count;
     shard->member_index = (mnemonic[3]>>4) & 15;
     shard->member_threshold = (mnemonic[3]&15) + 1;
-    shard->value_length=fromWords(mnemonic+4, mnemonic_length - 7, shard->value, 32);
+    shard->value_length=from_words(mnemonic+4, mnemonic_length - 7, shard->value, 32);
     if(shard->value_length < MIN_STRENGTH_BYTES) {
         return ERROR_SECRET_TOO_SHORT;
     }
@@ -305,23 +305,8 @@ int generate_mnemonics(
     return total_shards;
 }
 
-
-void print_group(slip39_group *g, unsigned int secret_length) {
-    printf("group index: %d  threshold: %d  count: %d\n",
-        g->group_index, g->member_threshold, g->count );
-    for(uint8_t i=0; i<g->count; ++i) {
-        printf("%d: ", g->member_index[i]);
-        print_hex(g->value[i], secret_length);
-    }
-}
-
-
-
-
-/////////////////////////////////////////////////
-// combine_shards
 int combine_shards_internal(
-    slip39_shard *shards, // array of shard structures
+    slip39_shard *shards,       // array of shard structures
     uint16_t shards_count,      // number of shards in array
     const char *passphrase,     // passphrase to unlock master secret
     const char **passwords,     // passwords for the shards
@@ -352,6 +337,11 @@ int combine_shards(
     return result;
 }
 
+/**
+ * This version of combine shards potentially modifies the shard structures
+ * in place, so it is for internal use only, however it provides the implementation
+ * for both combine_shards and combine_mnemonics.
+ */
 int combine_shards_internal(
     slip39_shard *shards,       // array of shard structures
     uint16_t shards_count,      // number of shards in array
@@ -545,7 +535,7 @@ void encrypt_shard(
 
 void decrypt_shard(
     slip39_shard *shard,
-    const char * passphrase
+    const char *passphrase
 ) {
     uint8_t temp[shard->value_length];
     slip39_decrypt(shard->value, shard->value_length, passphrase, shard->iteration_exponent, shard->identifier, temp);

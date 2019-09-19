@@ -103,27 +103,53 @@ int16_t lookup(const char *word);
 
 const char *slip39_word(int16_t word);
 
-// converts a string of whitespace delimited mnemonic words
-// to an array of 10-bit integers. Returns the number of integers
-// written to the buffer.
+/**
+ * converts a string of whitespace delimited mnemonic words
+ * to an array of 10-bit integers. Returns the number of integers
+ * written to the buffer.
+ *
+ * returns: number of ints written to the words buffer
+ *
+ * inputs: word_string: space delimited group of mnemonic words
+ * words: space to return results
+ * words_length: maximum size of the words buffer
+ */
+
 uint32_t parse_words(
     const char *words_string,
     uint16_t *words,
     uint32_t words_length
 );
 
-// convert a buffer of bytes into 10-bit mnemonic words
-// returns the number of words written or -1 if there was an error
-int32_t toWords(
+/**
+ * convert a buffer of bytes into 10-bit mnemonic words
+ *
+ * returns: the number of words written or -1 if there was an error
+ *
+ * inputs: buffer: byte buffer to encode into 10-bit words
+ *         size: size of the buffer
+ *         words: destination for the words
+ *         max: maximum number of words to write
+ */
+
+int32_t to_words(
     const uint8_t *buffer, // byte buffer to encode into 10-bit words
     uint32_t size,   // buffer size
     uint16_t *words, // destination for words
     uint32_t max     // maximum number of words to write
 );
 
-// convert a buffer of words into bytes
-// returns the number of bytes written or -1 if there was an error
-int32_t fromWords(
+/**
+ * convert a buffer of words into bytes
+ *
+ * returns: the number of bytes written or a negative number if there was an error
+ *
+ * inputs: words: array of words to decode
+ *         wordsise: number of elements in the words array
+ *         buffer: memory location to write results to
+ *         size: maximum number of bytes in the buffer.
+ */
+int32_t from_words(
     const uint16_t *words, // words to decode
     uint32_t wordsize,       // number of words to decode
     uint8_t *buffer,          // space for result
@@ -131,12 +157,27 @@ int32_t fromWords(
 );
 
 
-// fills the destination buffer with count random bytes
+/**
+ * fills the destination buffer with count random bytes
+ *
+ * inputs: dest: location to write random bytes to
+ *         count: number of bytes to write
+ */
 void randombytes(uint8_t *dest, uint32_t count);
 
-// creates an hmac from the data, storing it in the result field
-// the nnumber of pytes written is stored in the resultlen pointer
-// returns a pointer to the result buffer
+/**
+ * creates an hmac from the data, storing it in the result field
+ * the number of bytes written is stored in the resultlen pointer
+ *
+ * returns a pointer to the result buffer
+ *
+ * inputs: key: bytes representing the key
+ *         keylen: length of the key byte array
+ *         data: bytes to hmac
+ *         datalen: length of the data array
+ *         result: place for results
+ *         resultlen: maximum number of bytes to write to result
+ */
 uint8_t * hmac_sha256(
 	const uint8_t *key,
 	uint32_t keylen,
@@ -145,7 +186,16 @@ uint8_t * hmac_sha256(
     uint8_t *result,
     unsigned int *resultlen);
 
-// TODO: explain
+/**
+ * creates a digest used to help valididate secret reconstruction (see slip-39 docs)
+ *
+ * returns: a pointer to the resulting 4-byte digest
+ * inputs: random_data: array of data to create a digest for
+ *         rdlen: length of random_data array
+ *         shared_secret: bytes to use as the key for the hmac when generating digest
+ *         sslen: length of the shared secret array
+ *         result: a pointer to a block of 4 bytes to store the resulting digest
+ */
 uint8_t* create_digest(
 	const uint8_t *random_data,
 	uint32_t rdlen,
@@ -157,7 +207,20 @@ uint8_t* create_digest(
 //////////////////////////////////////////////////
 // slip39 shamir sharing
 
-// TODO: explain
+/**
+ * used slip39's version of shamir sharing to split a secret up into
+ * shard_count shares such that threshold of them must be presented
+ * to recover the secret.
+ *
+ * returns: the number of shards created
+ *
+ * inputs: threshold: number of shards required to recover secret
+ *         shard_count: number of shards to generate
+ *         secret: array of bytes representing the secret
+ *         secret_length: length of the secret array. must be >= 16, <= 32 and even.
+ *         result: place to store the resulting shares. Must be able to hold
+ *                 share_count * secret_length bytes.
+ */
 int32_t split_secret(
 	uint8_t threshold,
 	uint8_t shard_count,
@@ -166,8 +229,17 @@ int32_t split_secret(
 	uint8_t *result
 );
 
-// TODO: explain
-// returns the number of bytes written to the secret array, or -1 if there was an error
+/**
+ * recover a secret from shards
+ *
+ * returns: the number of bytes written to the secret array, or a negative value if there was an error
+ *
+ * inputs: threshold: number of shards required
+ *         x: array of x values  (length threshold)
+ *         shards: array (length threshold) of pointers to y value arrays
+ *         shard_length: number of bytes in each y value array
+ *         secret: array for writing results (must be at least shard_length long)
+ */
 int32_t recover_secret(
 	uint8_t threshold,
 	const uint8_t *x,
@@ -176,7 +248,20 @@ int32_t recover_secret(
 	uint8_t *secret
 );
 
-// TODO: explain
+/**
+ * this is the round function described in the slip39 spec for the Fiestel network
+ * it uses to encrypt/decrypt secrets with a passphrase
+ *
+ * inputs: i: round number
+ *         passphrase: ascii encoded passphrase
+ *         exp: exponent for the number of iterations of pbkd to run
+ *         salt: array of bytes to use a salt for the encryption
+ *         salt_lentgh: length of the salt array
+ *         r: array of bytes to encrypt
+ *         r_length: lenght of the r array
+ *         dest: location to store encrypted value
+ *         dest_length: maximum number of bytes to write to dest
+ */
 void round_function(
 	uint8_t i,
 	const char *passphrase,
@@ -189,7 +274,16 @@ void round_function(
 	uint32_t dest_length
 );
 
-// TODO: explain
+/**
+ * encrypts input using passphrase with the Fiestel network described in the slip39 spec
+ *
+ * inputs:  input: array of bytes to encrypt
+ *          input_length: length of input array
+ *          passphrase: null terminated ascii string
+ *          iteration_exponent: exponent for the number of pbkd rounds to use
+ *          identifier: identifier for the shard set (used as part of the salt)
+ *          output: memory location to write output to (same length as the input)
+ */
 void slip39_encrypt(
 	const uint8_t *input,
 	uint32_t input_length,
@@ -199,7 +293,16 @@ void slip39_encrypt(
 	uint8_t *output
 );
 
-// TODO: EXPLAIN
+/**
+ * decrypts input using passphrase with the Fiestel network described in the slip39 spec
+ *
+ * inputs:  input: array of bytes to decrypt
+ *          input_length: length of input array
+ *          passphrase: null terminated ascii string
+ *          iteration_exponent: exponent for the number of pbkd rounds to use
+ *          identifier: identifier for the shard set (used as part of the salt)
+ *          output: memory location to write output to (same length as the input)
+ */
 void slip39_decrypt(
 	const uint8_t *input,
 	uint32_t input_length,
@@ -209,33 +312,57 @@ void slip39_decrypt(
 	uint8_t *output
 );
 
-//////////////////////////////////////////////////
-// encode mnemonic
-unsigned int encode_mnemonic(
+/**
+ * encodes a shard as a mnemonic
+ *
+ * returns: number of mnemonic words generated on success, or a negative error code on failure.
+ *
+ * inputs: shard: pointer to a slip39_shard structure
+ *         destination: array of 16bit integers to write resulting mnemonic codes to
+ *         destination_length: maximum number of integers to write
+ */
+int encode_mnemonic(
     const slip39_shard *shard,
     uint16_t *destination,
     uint32_t destination_length
 );
 
-//////////////////////////////////////////////////
-// decode mnemonic
-unsigned int decode_mnemonic(
+/**
+ * decodes set of mnemonic codes as a slip39_shard structure
+ *
+ * returns: the length of the shard's secret on success or a negative error code on failure.
+ *
+ * inputs: mnemonic: array of 16-bit integers representing mnemonic codes
+ *         mnemonic_lentgh: lenght of mnemonic array
+ *         share: pointer to a shard structure to write results
+ */
+int decode_mnemonic(
 	const uint16_t *mnemonic,
 	uint32_t mnemonic_length,
 	slip39_shard *shard
 );
 
+/**
+ * diagnostic function for writing out hexidecimal encoded byte buffer.
+ *
+ * inputs: buffer: the buffer to display
+ *         length: number of bytes to display
+ */
 void print_hex(
     const uint8_t *buffer,
     uint32_t length
 );
 
+/**
+ * prints out string representation of a mnemonic code
+ *
+ * inputs: mnemonic: array of integers
+ *         mnemonic_length: length of mnemonic array
+ */
 void print_mnemonic(
     const uint16_t *mnemonic,
     unsigned int mnemonic_length
 );
-
-void print_group(slip39_group *g, unsigned int secret_length);
 
 /**
  * generate a set of shards that can be used to reconstuct a secret
@@ -254,7 +381,7 @@ void print_group(slip39_group *g, unsigned int secret_length);
  *         passphrase: string to use to encrypt the master secret
  *         iteration_exponent: exponent to use when calculating the number of rounds of encryption
  *                             to go through when encrypting the master secret.
- *         shards: array of shard structures to store the result ing
+ *         shards: array of shard structures to store the resulting shards
  *         shards_size: length of the shards array
  */
 
@@ -298,8 +425,30 @@ int combine_shards(
 );
 
 
-//////////////////////////////////////////////////
-// generate mnemonics
+/**
+ * generate a set of shards that can be used to reconstuct a secret
+ * using the given group policy, but encode them as mnemonic codes
+ *
+ * returns: the number of shards generated if successful,
+ *          or a negative number indicating an error code when unsuccessful
+ *
+ * inputs: group_threshold: the number of groups that need to be satisfied in order
+ *                          to reconstruct the secret
+ *         groups: an array of group descriptors
+ *         groups_length: the length of the groups array
+ *         master_secret: pointer to the secret to split up
+ *         master_secret_length: length of the master secret in bytes.
+ *                               must be >= 16, <= 32, and even.
+ *         passphrase: string to use to encrypt the master secret
+ *         iteration_exponent: exponent to use when calculating the number of rounds of encryption
+ *                             to go through when encrypting the master secret.
+ *         mnemonic_length: pointer to an integer that will be filled with the number of
+ *                          mnemonic words in each shard
+ *         mnemonics: array of shard structures to store the resulting mnemonics.
+ *                    the ith shard will be represented by
+ *                     mnemonics[i*mnemonic_length]..mnemonics[(i+1)*mnemonic_length -1]
+ *         buffer_size: maximum number of mnemonics code to write to the mnemonics array
+ */
 int generate_mnemonics(
 	uint8_t group_threshold,
 	const group_descriptor *groups,
@@ -314,8 +463,24 @@ int generate_mnemonics(
 );
 
 
-/////////////////////////////////////////////////
-// combine_mnemonics
+/**
+ * combine a set of mnemonic encoded shards to reconstuct a secret
+ *
+ * returns: the length of the reconstructed secret if successful
+ *          or a negative number indicating an error code when unsuccessful
+ *
+ * inputs: mnemonics: an array of pointers to arrays of mnemonic codes
+ *         mnemonics_words: length of each array of mnemonic codes\
+ *         mnemonics_shards: length of the mnemonics array
+ *         passphrase: passphrase to use encrypt the resulting secret
+ *         passwords: array of strings to use to decrypt shard data
+ *                    passing NULL disables password decrypt for all shards
+ *                    passing NULL for the ith password will disable decrypt for the ith shard
+ *                    passing a pointer to a string for the ith shard will cause the ith shard
+ *                    to be decrypted with the string before recombination
+ *         buffer: location to store the result
+ *         buffer_length: maximum space available in buffer
+ */
 int combine_mnemonics(
 	const uint16_t **mnemonics, // array of pointers to 10-bit words
 	uint32_t mnemonics_words,   // number of words in each shard
@@ -326,19 +491,28 @@ int combine_mnemonics(
 	uint32_t buffer_length      // total amount of working space
 );
 
-
+/**
+ * encrypt the share value of a shard
+ *
+ * inputs: shard: the shard to encrypt. The shard value is modified in place.
+ *         passphrase: a NULL terminated ascii string to use to encrypt the shard
+ */
 void encrypt_shard(
     slip39_shard *shard,
     const char *passphrase
 );
 
+/**
+ * decrypt the share value of a shard
+ *
+ * inputs: shard: the shard to decrypt. The shard value is modified in place.
+ *         passphrase: a NULL terminated ascii string to use to decrypt the shard
+ */
 void decrypt_shard(
     slip39_shard *shard,
     const char *passphrase
 );
 
-/////////////////////////////////////////////////
-// Binary Buffer Representations
 
 /**
  * decode a slip39 shard encoded in a binary buffer
@@ -355,10 +529,10 @@ void decrypt_shard(
  *         buffer_length: the length of the buffer
  */
 
-int decodeBinaryShare(
+int decode_binary_shard(
     slip39_shard *shard,
     const uint8_t *buffer,
-    uint8_t buffer_length
+    uint32_t buffer_length
 );
 
 /**
@@ -373,8 +547,7 @@ int decodeBinaryShare(
  *         buffer: a byte buffer containing a binary encoded shard
  *         buffer_length: the length of the buffer
  */
-
-int encodeBinaryShare(
+int encode_binary_shard(
     uint8_t *buffer,
     uint32_t buffer_length,
     const slip39_shard *shard

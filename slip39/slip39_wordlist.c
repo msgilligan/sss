@@ -77,7 +77,7 @@ uint32_t parse_words(
 
 // convert a buffer of bytes into 10-bit mnemonic words
 // returns the number of words written or -1 if there was an error
-int32_t toWords(
+int32_t to_words(
     const uint8_t *buffer, // byte buffer to encode into 10-bit words
     uint32_t size,   // buffer size
     uint16_t *words, // destination for words
@@ -128,7 +128,7 @@ int32_t toWords(
 }
 
 // returns the number of bytes written, or -1 if there was an error
-int32_t fromWords(
+int32_t from_words(
     const uint16_t *words, // words to decode
     uint32_t wordsize,       // number of words to decode
     uint8_t *buffer,          // space for result

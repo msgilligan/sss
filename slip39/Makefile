@@ -46,6 +46,13 @@ test_slip39_wordlist.out: test_slip39_wordlist.o slip39_wordlist.o
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
 	$(MEMCHECK) ./$@
 
+
+test_slip39_buffer.o: slip39.h test_slip39_buffer.c
+
+test_slip39_buffer.out: test_slip39_buffer.o slip39_buffer.o
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
+	$(MEMCHECK) ./$@
+
 test_random.o: test_random.c
 
 test_slip39_shamir.o: test_slip39_shamir.c slip39.h
@@ -75,6 +82,7 @@ slip39: slip39_cli.c libslip39.a ../randombytes/librandombytes.a
 	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -l crypto
 
 check: test_interpolate.out test_slip39_wordlist.out \
+    test_slip39_buffer.out \
     test_slip39_shamir.out test_slip39_encrypt.out test_generate_combine.out slip39_tests.out
 
 .PHONY: check check_slip39

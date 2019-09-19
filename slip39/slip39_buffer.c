@@ -1,7 +1,6 @@
 #include "slip39.h"
 
-
-int decodeBinaryShard(
+int decode_binary_shard(
     slip39_shard *shard,
     const uint8_t *buffer,
     uint32_t buffer_length
@@ -10,7 +9,7 @@ int decodeBinaryShard(
         return ERROR_INVALID_SHARD_BUFFER;
     }
 
-    shard->identifier = (buffer[3] << 8) & buffer[4];
+    shard->identifier = (buffer[3] << 8) | buffer[4];
     shard->iteration_exponent = buffer[5];
     shard->group_index = buffer[6];
     shard->group_threshold = buffer[7];
@@ -37,7 +36,7 @@ int decodeBinaryShard(
     return shard->value_length + 12;
 }
 
-int encodeBinaryShard(
+int encode_binary_shard(
     uint8_t *buffer,
     uint32_t buffer_length,
     const slip39_shard *shard
@@ -55,7 +54,7 @@ int encodeBinaryShard(
     buffer[6] = shard->group_index;
     buffer[7] = shard->group_threshold;
     buffer[8] = shard->group_count;
-    buffer[9] = shard->group_threshold;
+    buffer[9] = shard->member_index;
     buffer[10] = shard->member_threshold;
     buffer[11] = shard->value_length;
 

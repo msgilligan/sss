@@ -112,8 +112,6 @@ The binary
 This is a list of todos for howech to complete in the near future after
 the RWO9 conference:
 
-* Update comments
-
 * consider fixing the pedigree of hazmat.c
 
 * ensure that there are binary format api calls for dealing with binary format shares
