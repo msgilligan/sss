@@ -106,7 +106,12 @@ The binary
 | value              | 16 or 32 | 0x00 .. 0x00                |
 
 
+# External Dependencies
 
+This implementation of slip39 as a C library currently depends on Openssl. Specifically,
+slip39_encrypt.c depends on openssl for its implemnentation of PBKDF2_HMAC for the Fiestel
+round function. 
+ 
 # TODOs:
 
 This is a list of todos for howech to complete in the near future after
