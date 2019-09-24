@@ -46,7 +46,8 @@ void test_generate_combine(void) {
     int result = combine_mnemonics(recovery_mnemonics, words_per_share, 6, "", NULL, buffer, 1024);
 
     if(result < 0) {
-        printf("Recovery failed.\n");
+
+        printf("Recovery failed. %d\n", result);
         exit(-1);
     }
     printf("%s\n", buffer);
@@ -65,7 +66,7 @@ void test_generate_combine_passwords(void) {
     unsigned int words_per_share = 0;
 
     const char*p1[] = {"a",NULL,"c"};
-    const char*p3[] = {"e","f", "g", "h", "i"}; 
+    const char*p3[] = {"e","f", "g", "h", "i"};
     group_descriptor groups[3] = {
         {2,3, p1},
         {1,1, NULL},
@@ -99,7 +100,7 @@ void test_generate_combine_passwords(void) {
     };
 
     const char* passwords[] = {"a", NULL, NULL, "g" ,"f", "e"};
-    
+
     int result = combine_mnemonics(recovery_mnemonics, words_per_share, 6, "", passwords, buffer, 1024);
 
     if(result < 0) {

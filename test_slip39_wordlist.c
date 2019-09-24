@@ -43,8 +43,8 @@ uint8_t test_toWords_fromWords(void) {
     int32_t w;
 
     for(uint8_t i=0; i<26; i+=2) {
-        w = toWords((uint8_t *)x+i , strlen(x+i)+1, words, 25);
-        fromWords(words, w, results, 30);
+        w = to_words((uint8_t *)x+i , strlen(x+i)+1, words, 25);
+        from_words(words, w, results, 30);
 
         if(strcmp((char *)results,x+i) !=0) {
             printf("Fail: '%s' != '%s'\n", x+i, results);

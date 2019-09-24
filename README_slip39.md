@@ -70,17 +70,52 @@ totally secret!
 chris@rebma:~/projects/shamir/sss/slip39$
 ```
 
-TODOs:
+
+# Extensions
+
+Slip39 is designed to allow users to export recovery shards directly from
+trusted hardware as a recovery words. In other use cases, it may be useful
+to export the same data out to less trusted hardware, or in formats different
+from the recovery phrase.
+
+## Shard Encryption
+
+This implementation includes functions to encrypt and decrypt the exported shard
+information with a password (using the same encryption algorithm used by SLIP39
+to encrypt the recovered secret data with a passphrase.)
+
+## Binary format
+
+This implementation also includes some methods to export and import shards as
+binary buffers. This is useful when communicating directly with the library.
+
+The binary
+
+
+| Field Name         | Bytes    | Notes                       |
+|--------------------|----------|-----------------------------|
+| magic number       | 3        | 0x48 0xbd 0xfd              |
+| identifier         | 2        | big endian, 0x0000 - 0x7fff |
+| iteration exponent | 1        | 5 bits, 0x00 - 0x1f         |
+| group index        | 1        | 4 bits, 0x00 - 0x0f         |
+| group threshold    | 1        | 4 bits, 0x00 - 0x0f         |
+| group count        | 1        | 4 bits, 0x00 - 0x0f         |
+| member index       | 1        | 4 bits, 0x00 - 0x0f         |
+| member threshold   | 1        | 4 bits, 0x00 - 0x0f         |
+| value length       | 1        |  0x10 or 0x20               |
+| value              | 16 or 32 | 0x00 .. 0x00                |
+
+
+# External Dependencies
+
+This implementation of slip39 as a C library currently depends on Openssl. Specifically,
+slip39_encrypt.c depends on openssl for its implemnentation of PBKDF2_HMAC for the Fiestel
+round function. 
+ 
+# TODOs:
 
 This is a list of todos for howech to complete in the near future after
-the RWO9 conference:
-
-* Update comments
-
-* consider fixing the pedigree of hazmat.c
-
-* ensure that there are binary format api calls for dealing with binary format shares
+the RWOT9 conference:
 
 * look at reconsiling readmes
 
-* consider pr replacing parent sss directory with slip39 directory

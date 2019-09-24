@@ -11,6 +11,13 @@ int16_t lagrange(
     uint8_t m,   // index of this point
     const uint8_t *xi, // x coordinates of all points (array of size n)
     uint8_t x    // x coordinate to evaluate
+);
+
+int16_t lagrange(
+    uint8_t n,   // number of points to interpolate
+    uint8_t m,   // index of this point
+    const uint8_t *xi, // x coordinates of all points (array of size n)
+    uint8_t x    // x coordinate to evaluate
 ) {
     uint8_t values[n];
 
