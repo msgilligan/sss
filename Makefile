@@ -2,7 +2,9 @@ CFLAGS += -g -O2 -m64 -std=c99 -pedantic \
 	-Wall -Wshadow -Wpointer-arith -Wcast-qual -Wformat -Wformat-security \
 	-Werror=format-security -Wstrict-prototypes -Wmissing-prototypes \
 	-D_FORTIFY_SOURCE=2 -fPIC -fno-strict-overflow
-SRCS = hazmat.c randombytes.c sss.c tweetnacl.c
+SRCS = hazmat.c randombytes.c sss.c tweetnacl.c \
+    slip39_wordlist.c slip39_mnemonics.c slip39_rs1024.c \
+    slip39_encrypt.c slip39_shamir.c
 OBJS := ${SRCS:.c=.o}
 
 all: libsss.a libslip39.a
@@ -17,7 +19,7 @@ randombytes/librandombytes.a:
 hazmat.o: CFLAGS += -funroll-loops
 
 %.out: %.o randombytes/librandombytes.a
-	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -l crypto
 	$(MEMCHECK) ./$@
 
 test_hazmat.out: $(OBJS)
@@ -100,5 +102,5 @@ check: test_hazmat.out test_sss.out \
 .PHONY: clean
 clean:
 	$(MAKE) -C randombytes $@
-	$(RM) *.o *.gch *.a *.out
+	$(RM) *.o *.gch *.a *.out slip39 slip39_tests.c
 
