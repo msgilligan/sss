@@ -71,13 +71,13 @@ test_slip39_shamir.o: test_slip39_shamir.c slip39.h
 slip39_shamir.o: slip39_shamir.c slip39.h
 
 test_slip39_shamir.out: test_slip39_shamir.o slip39_shamir.o hazmat.o test_random.o
-	gcc $^ -o $@ -l crypto
+	gcc $^ -o $@ -l crypto -L/usr/local/opt/openssl/lib
 	./$@
 
 slip39_encrypt.o: slip39_encrypt.c slip39.h
 
 test_slip39_encrypt.out: test_slip39_encrypt.o slip39_encrypt.o randombytes/librandombytes.a
-	gcc $^ -o $@ -l crypto
+	gcc $^ -o $@ -l crypto -L/usr/local/opt/openssl/lib
 	./$@
 
 
